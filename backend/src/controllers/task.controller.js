@@ -1,8 +1,13 @@
 import Task from "../models/Task.js";
 
 export const getTasks = async (req, res) => {
-  const tasks = await Task.find({ user: req.user });
-  res.json(tasks);
+  try {
+    // req.user vem do seu middleware protectRoute
+    const tasks = await Task.find({ user: req.user._id }).sort({ createdAt: -1 });
+    res.status(200).json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao buscar tarefas" });
+  }
 };
 
 export const createTask = async (req, res) => {
