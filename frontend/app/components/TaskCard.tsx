@@ -13,7 +13,9 @@ const TaskCard = ({ task }: { task: any }) => {
   return (
     <div className="flex items-center gap-6 p-6 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all">
       <div className="flex items-center justify-center w-16 h-16 bg-gray-50 border border-gray-100 rounded-lg text-gray-400 relative">
-        <ImageIcon size={24} />
+        <div className="flex items-center justify-center w-20 h-20 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-400 group-hover:text-fuchsia-500 transition-colors">
+        <ImageIcon size={32} />
+      </div>
         <div className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-sm border border-gray-100">
           {getStatusIcon(task.status)}
         </div>

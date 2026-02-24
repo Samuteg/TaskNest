@@ -10,6 +10,8 @@ const taskSchema = new mongoose.Schema(
       default: "todo",
     },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // Dentro do seu taskSchema, adicione esta linha:
+    project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
   },
   { timestamps: true },
 );

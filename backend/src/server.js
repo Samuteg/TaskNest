@@ -5,6 +5,7 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
+import projectRoutes from "./routes/project.route.js";
 import { connectDB } from "./lib/db.js";
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/projects", projectRoutes);
 
 if (ENV.NODE_ENV == "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
