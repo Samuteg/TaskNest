@@ -98,3 +98,21 @@ export const logout = (_, res) => {
   res.cookie("jwt", "", { maxAge: 0 });
   res.status(200).json({ message: "Logged out successfully" });
 };
+
+// No Controller (auth.controller.js)
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullName } = req.body;
+    const userId = req.user._id; // Assumindo que você tem o middleware de proteção
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fullName },
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: "Erro ao atualizar perfil." });
+  }
+};

@@ -3,6 +3,7 @@ import {
   login,
   logout,
   signup,
+  updateProfile,
 } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -15,5 +16,7 @@ router.post("/logout", logout);
 router.get("/check", protectRoute, (req, res) => {
   res.status(200).json(req.user);
 });
+
+router.put("/profile", protectRoute, updateProfile);
 
 export default router;
