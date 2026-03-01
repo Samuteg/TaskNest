@@ -7,9 +7,12 @@ import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
 import { connectDB } from "./lib/db.js";
+import { fileURLToPath } from 'url';
 
 const app = express();
 const __dirname = path.resolve();
+const __filename = fileURLToPath(import.meta.url);
+const ___dirname = path.dirname(__filename);
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());

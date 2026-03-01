@@ -2,6 +2,8 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
+import multer from "multer";
+import path from "path";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -12,7 +14,9 @@ export const signup = async (req, res) => {
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
     }
 
     // check if emailis valid: regex
@@ -52,7 +56,11 @@ export const signup = async (req, res) => {
       });
 
       try {
-        await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
+        await sendWelcomeEmail(
+          savedUser.email,
+          savedUser.fullName,
+          ENV.CLIENT_URL,
+        );
       } catch (error) {
         console.error("Failed to send welcome email:", error);
       }
@@ -78,7 +86,8 @@ export const login = async (req, res) => {
     // never tell the client which one is incorrect: password or email
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isPasswordCorrect)
+      return res.status(400).json({ message: "Invalid credentials" });
 
     generateToken(user._id, res);
 
@@ -103,16 +112,26 @@ export const logout = (_, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { fullName } = req.body;
-    const userId = req.user._id; // Assumindo que você tem o middleware de proteção
+    const userId = req.user._id;
+
+    // A magia do Cloudinary: o req.file.path JÁ É o link final!
+    let profilePicUrl;
+    if (req.file) {
+      profilePicUrl = req.file.path; 
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { fullName },
-      { new: true }
-    ).select("-password");
+      { 
+        fullName, 
+        ...(req.file && { profilePic: profilePicUrl }) // Guardamos o link do Cloudinary
+      },
+      { returnDocument: 'after' }
+    ).select('-password'); // Protege a password!
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao atualizar perfil." });
+    console.log("Erro no updateProfile:", error.message);
+    res.status(500).json({ message: "Erro interno no servidor" });
   }
 };
