@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+/* Tailwind v4: faz o variant `dark:` responder à classe `.dark` */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: theme('colors.fuchsia.700');
 }

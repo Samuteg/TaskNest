@@ -134,16 +134,26 @@ export default function HomePage() {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-  const html = document.documentElement; // Isto seleciona a tag <html>
-  
-  if (darkMode) {
-    html.classList.add('dark');
-    console.log("Modo Escuro Ativado!");
-  } else {
-    html.classList.remove('dark');
-    console.log("Modo Claro Ativado!");
-  }
-}, [darkMode]);
+    const savedTheme = window.localStorage.getItem("tasknest-theme");
+
+    if (savedTheme === "dark") {
+      setDarkMode(true);
+      return;
+    }
+
+    if (savedTheme === "light") {
+      setDarkMode(false);
+      return;
+    }
+
+    setDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }, []);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.toggle("dark", darkMode);
+    window.localStorage.setItem("tasknest-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   const [projects, setProjects] = useState<any[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
