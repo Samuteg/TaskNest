@@ -6,16 +6,52 @@ import Sidebar from "./components/Sidebar";
 import TaskModal from "./components/TaskModal";
 import SettingsModal from "./components/SettingsModal";
 import {
-  Image as ImageIcon,
   Trash2,
   Edit3,
   Loader2,
   Plus,
   ArrowLeft,
   Settings,
+  GripVertical,
 } from "lucide-react";
 
 export default function HomePage() {
+  type TaskItem = {
+    _id: string;
+    title: string;
+    description?: string;
+    status: "todo" | "in-progress" | "done";
+    createdAt: string;
+    order?: number;
+  };
+  type TaskStatus = TaskItem["status"];
+
+  const kanbanColumns: Array<{
+    status: TaskStatus;
+    label: string;
+    emptyLabel: string;
+    badgeClass: string;
+  }> = [
+    {
+      status: "todo",
+      label: "Pendente",
+      emptyLabel: "Sem tarefas pendentes.",
+      badgeClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    },
+    {
+      status: "in-progress",
+      label: "Em Progresso",
+      emptyLabel: "Sem tarefas em progresso.",
+      badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+    },
+    {
+      status: "done",
+      label: "Concluídas",
+      emptyLabel: "Sem tarefas concluídas.",
+      badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    },
+  ];
+
   const cardColors = [
     "bg-fuchsia-600",
     "bg-pink-500",
@@ -28,6 +64,67 @@ export default function HomePage() {
     if (!dateString) return "25/01/2026";
     const date = new Date(dateString);
     return date.toLocaleDateString("pt-PT");
+  };
+
+  const sortTasksByDisplayOrder = (taskList: TaskItem[]) => {
+    return [...taskList].sort((a, b) => {
+      const aOrder =
+        typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
+      const bOrder =
+        typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
+
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  };
+
+  const getTasksByStatus = (taskList: TaskItem[], status: TaskStatus) => {
+    return sortTasksByDisplayOrder(taskList.filter((task) => task.status === status));
+  };
+
+  const moveTaskInBoard = (
+    taskList: TaskItem[],
+    draggedTaskId: string,
+    targetStatus: TaskStatus,
+    targetTaskId: string | null = null,
+  ) => {
+    if (targetTaskId && draggedTaskId === targetTaskId) return null;
+
+    const columns = {
+      todo: getTasksByStatus(taskList, "todo"),
+      "in-progress": getTasksByStatus(taskList, "in-progress"),
+      done: getTasksByStatus(taskList, "done"),
+    } satisfies Record<TaskStatus, TaskItem[]>;
+
+    const draggedTask = taskList.find((task) => task._id === draggedTaskId);
+    if (!draggedTask) return null;
+
+    const sourceStatus = draggedTask.status;
+    const sourceTasks = columns[sourceStatus];
+    const sourceIndex = sourceTasks.findIndex((task) => task._id === draggedTaskId);
+    if (sourceIndex < 0) return null;
+
+    sourceTasks.splice(sourceIndex, 1);
+
+    const movedTask = { ...draggedTask, status: targetStatus };
+    const targetTasks = columns[targetStatus];
+    const targetIndex = targetTaskId
+      ? targetTasks.findIndex((task) => task._id === targetTaskId)
+      : -1;
+
+    if (targetIndex >= 0) targetTasks.splice(targetIndex, 0, movedTask);
+    else targetTasks.push(movedTask);
+
+    const normalizedColumns = {
+      todo: columns.todo.map((task, index) => ({ ...task, order: index })),
+      "in-progress": columns["in-progress"].map((task, index) => ({
+        ...task,
+        order: index,
+      })),
+      done: columns.done.map((task, index) => ({ ...task, order: index })),
+    } satisfies Record<TaskStatus, TaskItem[]>;
+
+    return kanbanColumns.flatMap((column) => normalizedColumns[column.status]);
   };
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -48,12 +145,16 @@ export default function HomePage() {
   }
 }, [darkMode]);
 
-  const [projects, setProjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentView, setCurrentView] = useState<"projects" | "tasks" | "team">(
     "projects",
   );
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
+  const [isReorderingTasks, setIsReorderingTasks] = useState(false);
 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -91,7 +192,10 @@ export default function HomePage() {
       const res = await fetch(`http://localhost:5000/api/tasks/${projId}`, {
         credentials: "include",
       });
-      if (res.ok) setTasks(await res.json());
+      if (res.ok) {
+        const fetchedTasks = await res.json();
+        setTasks(sortTasksByDisplayOrder(fetchedTasks));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -162,6 +266,124 @@ export default function HomePage() {
   const openProject = (projectId: string) => {
     setActiveProjectId(projectId);
     setCurrentView("tasks");
+  };
+
+  const persistTasksBoard = async (
+    updatedTasks: TaskItem[],
+    previousTasks: TaskItem[],
+  ) => {
+    const previousTasksById = new Map(
+      previousTasks.map((task) => [task._id, task] as const),
+    );
+    const changedTasks = updatedTasks.filter((task) => {
+      const previousTask = previousTasksById.get(task._id);
+      if (!previousTask) return true;
+
+      return (
+        previousTask.status !== task.status ||
+        (previousTask.order ?? -1) !== (task.order ?? -1)
+      );
+    });
+
+    if (changedTasks.length === 0) return;
+
+    const responses = await Promise.all(
+      changedTasks.map((task) =>
+        fetch(`http://localhost:5000/api/tasks/${task._id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: task.status,
+            order: task.order ?? 0,
+          }),
+          credentials: "include",
+        }),
+      ),
+    );
+
+    if (responses.some((response) => !response.ok)) {
+      throw new Error("Não foi possível persistir o quadro Kanban.");
+    }
+  };
+
+  const handleTaskDragStart = (
+    event: React.DragEvent<HTMLElement>,
+    taskId: string,
+  ) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", taskId);
+    setDraggedTaskId(taskId);
+  };
+
+  const handleTaskDragOverTask = (
+    event: React.DragEvent<HTMLElement>,
+    taskStatus: TaskStatus,
+    taskId: string,
+  ) => {
+    event.preventDefault();
+
+    if (!draggedTaskId) return;
+
+    if (taskId !== dragOverTaskId || taskStatus !== dragOverStatus) {
+      setDragOverTaskId(taskId);
+      setDragOverStatus(taskStatus);
+    }
+  };
+
+  const handleTaskDragOverColumn = (
+    event: React.DragEvent<HTMLElement>,
+    taskStatus: TaskStatus,
+  ) => {
+    event.preventDefault();
+
+    if (!draggedTaskId) return;
+
+    if (taskStatus !== dragOverStatus || dragOverTaskId !== null) {
+      setDragOverStatus(taskStatus);
+      setDragOverTaskId(null);
+    }
+  };
+
+  const handleTaskDragEnd = () => {
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
+    setDragOverStatus(null);
+  };
+
+  const handleTaskDrop = async (
+    event: React.DragEvent<HTMLElement>,
+    targetStatus: TaskStatus,
+    targetTaskId: string | null = null,
+  ) => {
+    event.preventDefault();
+
+    if (!draggedTaskId) return;
+
+    const previousTasks = tasks;
+    const reorderedTasks = moveTaskInBoard(
+      tasks,
+      draggedTaskId,
+      targetStatus,
+      targetTaskId,
+    );
+
+    setDraggedTaskId(null);
+    setDragOverTaskId(null);
+    setDragOverStatus(null);
+
+    if (!reorderedTasks || !activeProjectId) return;
+
+    setTasks(reorderedTasks);
+    setIsReorderingTasks(true);
+
+    try {
+      await persistTasksBoard(reorderedTasks, previousTasks);
+    } catch (err) {
+      console.error("Erro ao guardar Kanban:", err);
+      fetchTasks(activeProjectId);
+    } finally {
+      setIsReorderingTasks(false);
+    }
   };
 
   if (loading)
@@ -286,52 +508,140 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {tasks.length > 0 ? (
-                <div className="space-y-3">
-                  {tasks.map((task: any) => (
+              <div className="mb-4 flex items-center justify-between text-xs font-bold text-gray-400 dark:text-zinc-500">
+                <span>Quadro Kanban: arrasta tarefas entre as colunas.</span>
+                {isReorderingTasks && (
+                  <span className="inline-flex items-center gap-1.5 text-fuchsia-600 dark:text-fuchsia-400">
+                    <Loader2 size={14} className="animate-spin" />
+                    A guardar quadro...
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {kanbanColumns.map((column) => {
+                  const columnTasks = getTasksByStatus(tasks, column.status);
+                  const isColumnDragOver =
+                    dragOverStatus === column.status && !dragOverTaskId;
+
+                  return (
                     <div
-                      key={task._id}
-                      className="flex items-center justify-between p-5 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 rounded-2xl shadow-sm hover:border-fuchsia-300 dark:hover:border-fuchsia-700 transition-all group"
+                      key={column.status}
+                      onDragOver={(event) =>
+                        handleTaskDragOverColumn(event, column.status)
+                      }
+                      onDrop={(event) => handleTaskDrop(event, column.status)}
+                      className={`rounded-2xl border-2 bg-white dark:bg-zinc-900 shadow-sm min-h-[320px] transition-all ${
+                        isColumnDragOver
+                          ? "border-fuchsia-300 dark:border-fuchsia-700 ring-2 ring-fuchsia-100 dark:ring-fuchsia-900/30"
+                          : "border-gray-100 dark:border-zinc-800"
+                      }`}
                     >
-                      <div className="flex items-center gap-4 overflow-hidden">
-                        <div
-                          className={`w-3 h-12 rounded-full shrink-0 ${task.status === "done" ? "bg-green-500 dark:bg-green-600" : task.status === "in-progress" ? "bg-blue-500 dark:bg-blue-600" : "bg-yellow-400 dark:bg-yellow-500"}`}
-                        />
-                        <div className="flex flex-col overflow-hidden">
-                          <h3
-                            className={`font-extrabold text-gray-900 dark:text-zinc-100 truncate text-lg ${task.status === "done" ? "line-through text-gray-400 dark:text-zinc-600" : ""}`}
-                          >
-                            {task.title}
-                          </h3>
-                          {task.description && (
-                            <p className="text-sm font-medium text-gray-500 dark:text-zinc-400 truncate mt-0.5">
-                              {task.description}
-                            </p>
-                          )}
-                        </div>
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+                        <span className="text-sm font-extrabold text-gray-800 dark:text-zinc-100">
+                          {column.label}
+                        </span>
+                        <span
+                          className={`px-2.5 py-1 text-[11px] font-extrabold rounded-full ${column.badgeClass}`}
+                        >
+                          {columnTasks.length}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            setEditingTask(task);
-                            setIsTaskModalOpen(true);
-                          }}
-                          className="p-2.5 text-gray-400 dark:text-zinc-500 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 rounded-xl transition-colors"
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task._id)}
-                          className="p-2.5 text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+
+                      <div className="p-3 space-y-3 min-h-[240px]">
+                        {columnTasks.length > 0 ? (
+                          columnTasks.map((task) => {
+                            const isDragging = draggedTaskId === task._id;
+                            const isDragOverTask =
+                              dragOverTaskId === task._id &&
+                              draggedTaskId !== task._id;
+
+                            return (
+                              <article
+                                key={task._id}
+                                draggable
+                                onDragStart={(event) =>
+                                  handleTaskDragStart(event, task._id)
+                                }
+                                onDragOver={(event) => {
+                                  event.stopPropagation();
+                                  handleTaskDragOverTask(
+                                    event,
+                                    column.status,
+                                    task._id,
+                                  );
+                                }}
+                                onDrop={(event) => {
+                                  event.stopPropagation();
+                                  handleTaskDrop(event, column.status, task._id);
+                                }}
+                                onDragEnd={handleTaskDragEnd}
+                                className={`p-4 border rounded-xl bg-white dark:bg-zinc-900 shadow-sm transition-all cursor-move group ${
+                                  isDragging
+                                    ? "opacity-60 border-fuchsia-400 dark:border-fuchsia-700"
+                                    : "border-gray-200 dark:border-zinc-700 hover:border-fuchsia-300 dark:hover:border-fuchsia-700"
+                                } ${
+                                  isDragOverTask
+                                    ? "ring-2 ring-fuchsia-200 dark:ring-fuchsia-800"
+                                    : ""
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <GripVertical
+                                    size={16}
+                                    className="text-gray-300 dark:text-zinc-600 mt-1 shrink-0"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <h3
+                                      className={`font-extrabold text-gray-900 dark:text-zinc-100 truncate ${
+                                        task.status === "done"
+                                          ? "line-through text-gray-400 dark:text-zinc-500"
+                                          : ""
+                                      }`}
+                                    >
+                                      {task.title}
+                                    </h3>
+                                    {task.description && (
+                                      <p className="text-xs font-medium text-gray-500 dark:text-zinc-400 mt-1 line-clamp-3">
+                                        {task.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-end gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => {
+                                      setEditingTask(task);
+                                      setIsTaskModalOpen(true);
+                                    }}
+                                    className="p-2 text-gray-400 dark:text-zinc-500 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 rounded-lg transition-colors"
+                                  >
+                                    <Edit3 size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteTask(task._id)}
+                                    className="p-2 text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </article>
+                            );
+                          })
+                        ) : (
+                          <div className="min-h-[160px] h-full rounded-xl border border-dashed border-gray-200 dark:border-zinc-700 flex items-center justify-center px-4 text-center text-xs font-bold text-gray-400 dark:text-zinc-500">
+                            {column.emptyLabel}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-white dark:bg-zinc-900 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl">
+                  );
+                })}
+              </div>
+
+              {tasks.length === 0 && (
+                <div className="mt-6 text-center py-10 bg-white dark:bg-zinc-900 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl">
                   <p className="text-gray-500 dark:text-zinc-400 font-bold mb-3">
                     Nenhuma tarefa neste projeto ainda.
                   </p>

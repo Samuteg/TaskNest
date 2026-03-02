@@ -8,7 +8,7 @@ export const getTasks = async (req, res) => {
     const tasks = await Task.find({ 
       project: projectId, 
       user: req.user._id 
-    }).sort({ createdAt: -1 });
+    }).sort({ order: 1, createdAt: -1 });
 
     res.status(200).json(tasks);
   } catch (error) {
@@ -25,11 +25,20 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ message: "Título e Projeto são obrigatórios." });
     }
 
+    const latestTask = await Task.findOne({
+      project,
+      user: req.user._id,
+    }).sort({ order: -1, createdAt: -1 });
+
+    const nextOrder =
+      typeof latestTask?.order === "number" ? latestTask.order + 1 : 0;
+
     const newTask = new Task({
       title,
       description,
       project, // ID do projeto vindo do frontend
       user: req.user._id, // ID do usuário logado
+      order: nextOrder,
     });
 
     await newTask.save();
