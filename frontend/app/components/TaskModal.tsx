@@ -55,10 +55,10 @@ const TaskModal = ({
         onClose();
       } else {
         const data = await response.json();
-        setError(data.message || "Erro ao guardar tarefa.");
+        setError(data.message || "Erro ao salvar tarefa.");
       }
     } catch (err) {
-      setError("Erro de ligação.");
+      setError("Erro de conexão.");
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +69,7 @@ const TaskModal = ({
       <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-zinc-800">
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50">
           <h2 className="text-xl font-extrabold text-gray-900 dark:text-zinc-100">
-            {taskToEdit ? "Editar Tarefa" : "Nova Tarefa"}
+            {taskToEdit ? "Editar tarefa" : "Nova tarefa"}
           </h2>
           <button
             onClick={onClose}
@@ -117,7 +117,7 @@ const TaskModal = ({
               onChange={(e) => setStatus(e.target.value)}
             >
               <option value="todo">Pendente</option>
-              <option value="in-progress">Em Progresso</option>
+              <option value="in-progress">Em progresso</option>
               <option value="done">Concluída</option>
             </select>
           </div>
@@ -137,7 +137,7 @@ const TaskModal = ({
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
-                "Guardar"
+                "Salvar"
               )}
             </button>
           </div>

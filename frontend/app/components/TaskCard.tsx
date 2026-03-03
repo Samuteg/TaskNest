@@ -1,7 +1,7 @@
 import {Image as ImageIcon, CheckCircle2, Clock, ListTodo } from 'lucide-react';
 
 const TaskCard = ({ task }: { task: any }) => {
-  // Ícone muda baseada no status
+  // O ícone muda de acordo com o status
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'done': return <CheckCircle2 size={18} className="text-green-500" />;
@@ -27,7 +27,7 @@ const TaskCard = ({ task }: { task: any }) => {
         </div>
         <p className="text-sm text-gray-500 line-clamp-2">{task.description || "Sem descrição"}</p>
         
-        {/* Mostra a data de criação formatada */}
+        {/* Exibe a data de criação formatada */}
         <span className="text-[10px] text-gray-300 mt-2 uppercase font-bold tracking-wider">
           Criado em: {new Date(task.createdAt).toLocaleDateString('pt-BR')}
         </span>

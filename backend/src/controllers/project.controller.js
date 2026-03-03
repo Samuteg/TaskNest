@@ -75,9 +75,9 @@ export const deleteProject = async (req, res) => {
     // 2º passo: Apaga todas as tarefas que pertenciam a este projeto
     await Task.deleteMany({ project: id });
 
-    res.status(200).json({ message: "Projeto e tarefas associadas apagados com sucesso." });
+    res.status(200).json({ message: "Projeto e tarefas associadas excluídos com sucesso." });
   } catch (error) {
     console.error("Erro em deleteProject:", error.message);
-    res.status(500).json({ message: "Erro interno ao apagar projeto." });
+    res.status(500).json({ message: "Erro interno ao excluir projeto." });
   }
 };

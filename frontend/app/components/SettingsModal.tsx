@@ -39,7 +39,7 @@ const SettingsModal = ({
         setMessage({ text: "Erro ao atualizar.", type: "error" });
       }
     } catch (err) {
-      setMessage({ text: "Erro de ligação.", type: "error" });
+      setMessage({ text: "Erro de conexão.", type: "error" });
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +99,7 @@ const SettingsModal = ({
               <form onSubmit={handleUpdateProfile} className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2">
-                    E-mail (Permanente)
+                    E-mail (permanente)
                   </label>
                   <input
                     type="text"
@@ -110,7 +110,7 @@ const SettingsModal = ({
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2">
-                    Nome Completo
+                    Nome completo
                   </label>
                   <input
                     type="text"
@@ -127,7 +127,7 @@ const SettingsModal = ({
                   {isLoading ? (
                     <Loader2 className="animate-spin" />
                   ) : (
-                    "Guardar Nome"
+                    "Salvar nome"
                   )}
                 </button>
               </form>
@@ -137,7 +137,7 @@ const SettingsModal = ({
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2">
-                    Nova Senha
+                    Nova senha
                   </label>
                   <input
                     type="password"
@@ -146,7 +146,7 @@ const SettingsModal = ({
                   />
                 </div>
                 <button className="w-full bg-gray-900 dark:bg-zinc-700 text-white font-bold py-3 rounded-xl hover:bg-black dark:hover:bg-zinc-600 transition-all">
-                  Atualizar Senha
+                  Atualizar senha
                 </button>
               </div>
             )}
@@ -164,8 +164,8 @@ const SettingsModal = ({
                     className="w-full flex items-center justify-between p-3 border border-gray-200 dark:border-zinc-700 rounded-xl text-sm font-bold bg-white dark:bg-zinc-800 text-gray-900 dark:text-zinc-100 hover:border-fuchsia-300 dark:hover:border-fuchsia-700 transition-colors"
                   >
                     {darkMode
-                      ? "🌙 Modo Escuro Ativado"
-                      : "☀️ Modo Claro Ativado"}
+                      ? "Modo escuro ativado"
+                      : "Modo claro ativado"}
                     <div
                       className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${darkMode ? "bg-fuchsia-600" : "bg-gray-300 dark:bg-zinc-600"}`}
                     >

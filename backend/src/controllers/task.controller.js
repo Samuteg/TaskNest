@@ -22,7 +22,7 @@ export const createTask = async (req, res) => {
     const { title, description, project } = req.body;
 
     if (!title || !project) {
-      return res.status(400).json({ message: "Título e Projeto são obrigatórios." });
+      return res.status(400).json({ message: "Título e projeto são obrigatórios." });
     }
 
     const latestTask = await Task.findOne({
@@ -58,5 +58,5 @@ export const updateTask = async (req, res) => {
 
 export const deleteTask = async (req, res) => {
   await Task.findByIdAndDelete(req.params.id);
-  res.json({ message: "Tarefa deletada" });
+  res.json({ message: "Tarefa excluída." });
 };

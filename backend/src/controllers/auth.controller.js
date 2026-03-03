@@ -8,21 +8,21 @@ export const signup = async (req, res) => {
 
   try {
     if (!fullName || !email || !password) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "Todos os campos são obrigatórios." });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+      return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
     }
 
     // check if emailis valid: regex
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
+      return res.status(400).json({ message: "Formato de e-mail inválido." });
     }
 
     const user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "Email already exists" });
+    if (user) return res.status(400).json({ message: "E-mail já cadastrado." });
 
     // 123456 => $dnjasdkasj_?dmsakmk
     const salt = await bcrypt.genSalt(10);
@@ -57,11 +57,11 @@ export const signup = async (req, res) => {
         console.error("Failed to send welcome email:", error);
       }
     } else {
-      res.status(400).json({ message: "Invalid user data" });
+      res.status(400).json({ message: "Dados de usuário inválidos." });
     }
   } catch (error) {
     console.log("Error in signup controller:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Erro interno do servidor." });
   }
 };
 
@@ -69,16 +69,16 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({ message: "E-mail e senha são obrigatórios." });
   }
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) return res.status(400).json({ message: "Credenciais inválidas." });
     // never tell the client which one is incorrect: password or email
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isPasswordCorrect) return res.status(400).json({ message: "Credenciais inválidas." });
 
     generateToken(user._id, res);
 
@@ -90,13 +90,13 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in login controller:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Erro interno do servidor." });
   }
 };
 
 export const logout = (_, res) => {
   res.cookie("jwt", "", { maxAge: 0 });
-  res.status(200).json({ message: "Logged out successfully" });
+  res.status(200).json({ message: "Logout realizado com sucesso." });
 };
 
 // No Controller (auth.controller.js)

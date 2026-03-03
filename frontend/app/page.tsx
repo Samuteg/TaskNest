@@ -63,7 +63,7 @@ export default function HomePage() {
   const formatDate = (dateString: string) => {
     if (!dateString) return "25/01/2026";
     const date = new Date(dateString);
-    return date.toLocaleDateString("pt-PT");
+    return date.toLocaleDateString("pt-BR");
   };
 
   const sortTasksByDisplayOrder = (taskList: TaskItem[]) => {
@@ -255,7 +255,7 @@ export default function HomePage() {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (!window.confirm("Apagar esta tarefa?")) return;
+    if (!window.confirm("Excluir esta tarefa?")) return;
     try {
       await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
         method: "DELETE",
@@ -424,8 +424,7 @@ export default function HomePage() {
                     Meus Projetos
                   </h1>
                   <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                    Bem-vindo, {user.fullName}! Faz a gestão dos teus projetos
-                    aqui.
+                    Bem-vindo, {user.fullName}! Gerencie seus projetos por aqui.
                   </p>
                 </div>
                 <button
@@ -473,10 +472,10 @@ export default function HomePage() {
                           </button>
                         </div>
                         <p className="text-sm font-medium text-gray-500 dark:text-zinc-400 line-clamp-2 mt-2">
-                          Clica aqui para gerires as tarefas deste projeto.
+                          Clique aqui para gerenciar as tarefas deste projeto.
                         </p>
                         <div className="mt-auto pt-4 flex items-center justify-between text-xs font-bold text-gray-400 dark:text-zinc-500">
-                          <span>Acesso Rápido</span>
+                          <span>Acesso rápido</span>
                           <span className="flex items-center text-fuchsia-600 dark:text-fuchsia-400 group-hover:translate-x-1 transition-transform">
                             Abrir &rarr;
                           </span>
@@ -495,7 +494,7 @@ export default function HomePage() {
                 onClick={() => setCurrentView("projects")}
                 className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-fuchsia-700 dark:hover:text-fuchsia-400 mb-6 font-bold transition-colors"
               >
-                <ArrowLeft size={18} /> Voltar aos projetos
+                <ArrowLeft size={18} /> Voltar para projetos
               </button>
 
               <div className="flex justify-between items-end border-b-2 border-gray-100 dark:border-zinc-800 pb-5 mb-6">
@@ -504,7 +503,7 @@ export default function HomePage() {
                     {activeProject?.name}
                   </h1>
                   <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                    Gere as tarefas deste projeto específico.
+                    Gerencie as tarefas deste projeto.
                   </p>
                 </div>
                 <button
@@ -519,11 +518,11 @@ export default function HomePage() {
               </div>
 
               <div className="mb-4 flex items-center justify-between text-xs font-bold text-gray-400 dark:text-zinc-500">
-                <span>Quadro Kanban: arrasta tarefas entre as colunas.</span>
+                <span>Quadro Kanban: arraste tarefas entre as colunas.</span>
                 {isReorderingTasks && (
                   <span className="inline-flex items-center gap-1.5 text-fuchsia-600 dark:text-fuchsia-400">
                     <Loader2 size={14} className="animate-spin" />
-                    A guardar quadro...
+                    Salvando quadro...
                   </span>
                 )}
               </div>
@@ -662,7 +661,7 @@ export default function HomePage() {
                     }}
                     className="text-fuchsia-700 dark:text-fuchsia-400 font-extrabold hover:underline"
                   >
-                    Adiciona a tua primeira tarefa
+                    Adicione sua primeira tarefa
                   </button>
                 </div>
               )}
@@ -673,10 +672,10 @@ export default function HomePage() {
             <>
               <div className="mb-8">
                 <h1 className="text-3xl font-extrabold text-gray-900 dark:text-zinc-50 mb-1">
-                  Membros da Equipa
+                  Membros da Equipe
                 </h1>
                 <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                  Gere quem tem acesso aos teus projetos.
+                  Gerencie quem tem acesso aos seus projetos.
                 </p>
               </div>
 
@@ -730,10 +729,10 @@ export default function HomePage() {
                     <tr>
                       <td colSpan={4} className="px-6 py-10 text-center">
                         <p className="text-gray-400 dark:text-zinc-500 font-bold text-sm mb-4">
-                          Desejas colaborar com outros utilizadores?
+                          Deseja colaborar com outros usuários?
                         </p>
                         <button className="inline-flex items-center gap-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 px-5 py-2.5 rounded-xl font-extrabold text-sm hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/40 transition-colors">
-                          <Plus size={16} /> Convidar Membro
+                          <Plus size={16} /> Convidar membro
                         </button>
                       </td>
                     </tr>

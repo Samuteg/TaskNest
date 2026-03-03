@@ -23,7 +23,7 @@ const Sidebar = ({ user, onLogout, onOpenSettings, currentView, setCurrentView }
             className={`flex items-center gap-3 w-full p-2.5 rounded-lg font-bold transition-all ${currentView === 'team' ? 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400' : 'text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-100'}`}
           >
             <Users size={18} />
-            <span className="text-sm">Equipa</span>
+            <span className="text-sm">Equipe</span>
           </button>
 
           <button 
