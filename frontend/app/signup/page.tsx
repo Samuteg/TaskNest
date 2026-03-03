@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, Mail, Lock, UserPlus, Loader2, ArrowLeft } from "lucide-react";
+import { apiUrl } from "../lib/api";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
@@ -18,7 +19,7 @@ export default function SignupPage() {
 
     try {
       // Chamada para sua rota de signup no Node.js
-      const response = await fetch("http://localhost:5000/api/auth/signup", {
+      const response = await fetch(apiUrl("/api/auth/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

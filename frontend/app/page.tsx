@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "./components/Sidebar";
 import TaskModal from "./components/TaskModal";
 import SettingsModal from "./components/SettingsModal";
+import { apiUrl } from "./lib/api";
 import {
   Trash2,
   Edit3,
@@ -176,7 +177,7 @@ export default function HomePage() {
 
   const fetchUserData = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/check", {
+      const res = await fetch(apiUrl("/api/auth/check"), {
         credentials: "include",
       });
       if (res.ok) setUser(await res.json());
@@ -188,7 +189,7 @@ export default function HomePage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/projects", {
+      const res = await fetch(apiUrl("/api/projects"), {
         credentials: "include",
       });
       if (res.ok) setProjects(await res.json());
@@ -199,7 +200,7 @@ export default function HomePage() {
 
   const fetchTasks = async (projId: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/tasks/${projId}`, {
+      const res = await fetch(apiUrl(`/api/tasks/${projId}`), {
         credentials: "include",
       });
       if (res.ok) {
@@ -228,7 +229,7 @@ export default function HomePage() {
     const name = window.prompt("Nome do novo projeto:");
     if (!name) return;
     try {
-      await fetch("http://localhost:5000/api/projects", {
+      await fetch(apiUrl("/api/projects"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -245,7 +246,7 @@ export default function HomePage() {
     e.stopPropagation();
     if (!window.confirm("Excluir projeto e todas as tarefas?")) return;
     try {
-      await fetch(`http://localhost:5000/api/projects/${projectId}`, {
+      await fetch(apiUrl(`/api/projects/${projectId}`), {
         method: "DELETE",
         credentials: "include",
       });
@@ -257,7 +258,7 @@ export default function HomePage() {
   const handleDeleteTask = async (taskId: string) => {
     if (!window.confirm("Excluir esta tarefa?")) return;
     try {
-      await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+      await fetch(apiUrl(`/api/tasks/${taskId}`), {
         method: "DELETE",
         credentials: "include",
       });
@@ -266,7 +267,7 @@ export default function HomePage() {
   };
 
   const handleLogout = async () => {
-    await fetch("http://localhost:5000/api/auth/logout", {
+    await fetch(apiUrl("/api/auth/logout"), {
       method: "POST",
       credentials: "include",
     });
@@ -299,7 +300,7 @@ export default function HomePage() {
 
     const responses = await Promise.all(
       changedTasks.map((task) =>
-        fetch(`http://localhost:5000/api/tasks/${task._id}`, {
+        fetch(apiUrl(`/api/tasks/${task._id}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
