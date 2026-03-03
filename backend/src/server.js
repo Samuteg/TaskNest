@@ -39,7 +39,16 @@ app.get("/", (req, res) => {
   res.status(200).json({ status: "ok", service: "TaskNest API" });
 });
 
-app.listen(PORT, () => {
-  console.log("server running on port " + PORT);
-  connectDB();
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log("server running on port " + PORT);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+};
+
+startServer();
