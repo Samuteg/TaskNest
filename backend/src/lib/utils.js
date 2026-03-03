@@ -6,6 +6,7 @@ export const generateToken = (userId, res) => {
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
+  const isProduction = ENV.NODE_ENV === "production";
   const token = jwt.sign({ userId }, ENV.JWT_SECRET, {
     expiresIn: "7d",
   });
@@ -13,8 +14,8 @@ export const generateToken = (userId, res) => {
   res.cookie("jwt", token, {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     httpOnly: true, //prevents XSS attacks
-    sameSite: "strict", //prevents CSRF attacks
-    secure: ENV.NODE_ENV === "development" ? false : true, //cookie only sent over HTTPS in production
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction, // cookie only sent over HTTPS in production
   });
 
   return token;
