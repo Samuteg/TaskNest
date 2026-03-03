@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { X, Loader2, Users, Settings, LayoutDashboard } from "lucide-react";
+import { apiUrl } from "../lib/api";
 
 const SettingsModal = ({
   isOpen,
@@ -26,7 +27,7 @@ const SettingsModal = ({
     setMessage({ text: "", type: "" });
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
+      const response = await fetch(apiUrl("/api/auth/profile"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName }),

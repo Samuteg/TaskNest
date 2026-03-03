@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
+import { apiUrl } from "../lib/api";
 
 // --- COMPONENTE DO MODAL ---
 const TaskModal = ({
@@ -36,8 +37,8 @@ const TaskModal = ({
 
     try {
       const url = taskToEdit
-        ? `http://localhost:5000/api/tasks/${taskToEdit._id}`
-        : `http://localhost:5000/api/tasks`;
+        ? apiUrl(`/api/tasks/${taskToEdit._id}`)
+        : apiUrl("/api/tasks");
       const response = await fetch(url, {
         method: taskToEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },

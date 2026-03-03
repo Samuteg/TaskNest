@@ -5,15 +5,28 @@ import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
 import { connectDB } from "./lib/db.js";
+import { ENV } from "./lib/env.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const allowedOrigins = [ENV.FRONTEND_URL, "http://localhost:3000"]
+  .filter(Boolean)
+  .map((url) => url.replace(/\/+$/, ""));
 
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000", // A URL exata do seu Next.js
-    credentials: true, // Essencial para enviar cookies/tokens de autenticação
+    origin: (origin, callback) => {
+      const normalizedOrigin = origin ? origin.replace(/\/+$/, "") : origin;
+
+      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
   }),
 );
 app.use(cookieParser());
