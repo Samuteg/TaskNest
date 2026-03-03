@@ -1,7 +1,5 @@
 import express from "express";
-import { ENV } from "./lib/env.js";
 import cors from "cors";
-import path from "path";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
@@ -9,7 +7,6 @@ import projectRoutes from "./routes/project.route.js";
 import { connectDB } from "./lib/db.js";
 
 const app = express();
-const __dirname = path.resolve();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
@@ -25,15 +22,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
 
-if (ENV.NODE_ENV == "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+app.get("/", (req, res) => {
+  res.status(200).json({ status: "ok", service: "TaskNest API" });
+});
 
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
-  });
-}
-
-app.listen(ENV.PORT, () => {
+app.listen(PORT, () => {
   console.log("server running on port " + PORT);
   connectDB();
 });
