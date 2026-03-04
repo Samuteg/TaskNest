@@ -2,6 +2,10 @@ import { generateToken } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import { ENV } from "../lib/env.js";
+import {
+  isCloudinaryConfigured,
+  uploadProfileImageToCloudinary,
+} from "../lib/cloudinary.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -140,9 +144,18 @@ export const logout = (_, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const { fullName, profilePic } = req.body;
-    const userId = req.user._id; // Assumindo que você tem o middleware de proteção
+    const userId = req.user._id;
+    const updateData = {};
 
-    const updateData = { fullName };
+    if (typeof fullName === "string") {
+      const normalizedFullName = fullName.trim();
+
+      if (!normalizedFullName) {
+        return res.status(400).json({ message: "Nome completo é obrigatório." });
+      }
+
+      updateData.fullName = normalizedFullName;
+    }
 
     if (typeof profilePic === "string") {
       const normalizedProfilePic = profilePic.trim();
@@ -161,14 +174,46 @@ export const updateProfile = async (req, res) => {
       updateData.profilePic = normalizedProfilePic;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true }
-    ).select("-password");
+    if (!Object.keys(updateData).length) {
+      return res.status(400).json({ message: "Nenhum dado válido para atualizar." });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+    }).select("-password");
 
     res.status(200).json(updatedUser);
   } catch (error) {
     res.status(500).json({ message: "Erro ao atualizar perfil." });
+  }
+};
+
+export const uploadProfilePicture = async (req, res) => {
+  try {
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({
+        message: "Cloudinary não configurado no servidor.",
+      });
+    }
+
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: "Selecione uma imagem para enviar." });
+    }
+
+    const userId = req.user._id.toString();
+    const uploadResult = await uploadProfileImageToCloudinary(req.file.buffer, userId);
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { profilePic: uploadResult.secure_url },
+      { new: true },
+    ).select("-password");
+
+    res.status(200).json({
+      profilePic: updatedUser?.profilePic || "",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error in uploadProfilePicture controller:", error);
+    res.status(500).json({ message: "Erro ao enviar imagem de perfil." });
   }
 };
