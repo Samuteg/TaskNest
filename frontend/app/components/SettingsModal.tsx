@@ -2,6 +2,19 @@ import React, { useEffect, useState } from "react";
 import { X, Loader2, Users, Settings, LayoutDashboard } from "lucide-react";
 import { apiUrl } from "../lib/api";
 
+type SettingsModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  user: {
+    fullName: string;
+    email: string;
+    profilePic?: string;
+  } | null;
+  onSuccess: () => void | Promise<void>;
+  darkMode: boolean;
+  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
 const SettingsModal = ({
   isOpen,
   onClose,
@@ -9,17 +22,21 @@ const SettingsModal = ({
   onSuccess,
   darkMode,
   setDarkMode,
-}: any) => {
+}: SettingsModalProps) => {
   const [activeTab, setActiveTab] = useState("profile");
   const [fullName, setFullName] = useState("");
+  const [profilePic, setProfilePic] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
 
   useEffect(() => {
-    if (user && isOpen) setFullName(user.fullName);
+    if (user && isOpen) {
+      setFullName(user.fullName);
+      setProfilePic(user.profilePic || "");
+    }
   }, [user, isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !user) return null;
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,16 +47,17 @@ const SettingsModal = ({
       const response = await fetch(apiUrl("/api/auth/profile"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName }),
+        body: JSON.stringify({ fullName, profilePic }),
         credentials: "include",
       });
       if (response.ok) {
         setMessage({ text: "Perfil atualizado com sucesso!", type: "success" });
         onSuccess();
       } else {
-        setMessage({ text: "Erro ao atualizar.", type: "error" });
+        const data = await response.json();
+        setMessage({ text: data.message || "Erro ao atualizar.", type: "error" });
       }
-    } catch (err) {
+    } catch {
       setMessage({ text: "Erro de conexão.", type: "error" });
     } finally {
       setIsLoading(false);
@@ -100,6 +118,38 @@ const SettingsModal = ({
               <form onSubmit={handleUpdateProfile} className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2">
+                    Foto de perfil
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 flex items-center justify-center font-extrabold text-xl shrink-0">
+                      {profilePic ? (
+                        <img
+                          src={profilePic}
+                          alt="Foto de perfil"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        user?.fullName?.charAt(0)?.toUpperCase() || "U"
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="url"
+                        placeholder="https://exemplo.com/foto.jpg"
+                        className="w-full p-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-fuchsia-600 outline-none font-medium text-gray-900 dark:text-zinc-100"
+                        value={profilePic}
+                        onChange={(e) => setProfilePic(e.target.value)}
+                      />
+                      <p className="text-xs font-medium text-gray-500 dark:text-zinc-500">
+                        Cole a URL pública da imagem para usar como foto.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-zinc-300 mb-2">
                     E-mail (permanente)
                   </label>
                   <input
@@ -128,7 +178,7 @@ const SettingsModal = ({
                   {isLoading ? (
                     <Loader2 className="animate-spin" />
                   ) : (
-                    "Salvar nome"
+                    "Salvar perfil"
                   )}
                 </button>
               </form>

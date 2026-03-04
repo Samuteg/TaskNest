@@ -88,6 +88,43 @@ export const login = async (req, res) => {
   }
 };
 
+export const forgotPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: "E-mail e nova senha são obrigatórios." });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Formato de e-mail inválido." });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+
+    // Keep response generic when e-mail is not found.
+    if (!user) {
+      return res.status(200).json({
+        message: "Se o e-mail estiver cadastrado, a senha foi redefinida.",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.status(200).json({ message: "Senha redefinida com sucesso." });
+  } catch (error) {
+    console.error("Error in forgotPassword controller:", error);
+    res.status(500).json({ message: "Erro interno do servidor." });
+  }
+};
+
 export const logout = (_, res) => {
   const isProduction = ENV.NODE_ENV === "production";
   res.cookie("jwt", "", {
@@ -102,12 +139,31 @@ export const logout = (_, res) => {
 // No Controller (auth.controller.js)
 export const updateProfile = async (req, res) => {
   try {
-    const { fullName } = req.body;
+    const { fullName, profilePic } = req.body;
     const userId = req.user._id; // Assumindo que você tem o middleware de proteção
+
+    const updateData = { fullName };
+
+    if (typeof profilePic === "string") {
+      const normalizedProfilePic = profilePic.trim();
+
+      if (normalizedProfilePic) {
+        try {
+          const parsedUrl = new URL(normalizedProfilePic);
+          if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+            return res.status(400).json({ message: "URL da foto de perfil inválida." });
+          }
+        } catch {
+          return res.status(400).json({ message: "URL da foto de perfil inválida." });
+        }
+      }
+
+      updateData.profilePic = normalizedProfilePic;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { fullName },
+      updateData,
       { new: true }
     ).select("-password");
 
