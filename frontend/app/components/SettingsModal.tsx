@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { X, Loader2, Users, Settings, LayoutDashboard } from "lucide-react";
 import { apiUrl } from "../lib/api";
 
@@ -26,17 +26,94 @@ const SettingsModal = ({
   const [activeTab, setActiveTab] = useState("profile");
   const [fullName, setFullName] = useState("");
   const [profilePic, setProfilePic] = useState("");
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [localProfilePreview, setLocalProfilePreview] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (user && isOpen) {
       setFullName(user.fullName);
       setProfilePic(user.profilePic || "");
+      setSelectedProfileFile(null);
+      setLocalProfilePreview("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }, [user, isOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (localProfilePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(localProfilePreview);
+      }
+    };
+  }, [localProfilePreview]);
+
   if (!isOpen || !user) return null;
+
+  const clearLocalPreview = () => {
+    if (localProfilePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(localProfilePreview);
+    }
+    setLocalProfilePreview("");
+  };
+
+  const extractMessage = async (
+    response: Response,
+    fallbackMessage: string,
+  ): Promise<string> => {
+    try {
+      const data = await response.json();
+      return data.message || fallbackMessage;
+    } catch {
+      return fallbackMessage;
+    }
+  };
+
+  const handleSelectProfileFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    clearLocalPreview();
+    const previewUrl = URL.createObjectURL(file);
+    setLocalProfilePreview(previewUrl);
+    setSelectedProfileFile(file);
+    setMessage({ text: "", type: "" });
+  };
+
+  const uploadProfileImage = async (): Promise<string> => {
+    if (!selectedProfileFile) return profilePic;
+
+    setIsUploadingImage(true);
+    const formData = new FormData();
+    formData.append("profileImage", selectedProfileFile);
+
+    try {
+      const response = await fetch(apiUrl("/api/auth/profile/upload"), {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await extractMessage(response, "Erro ao enviar imagem."));
+      }
+
+      const data = await response.json();
+      return data.profilePic || "";
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,21 +121,39 @@ const SettingsModal = ({
     setMessage({ text: "", type: "" });
 
     try {
+      let nextProfilePic = profilePic;
+      if (selectedProfileFile) {
+        nextProfilePic = await uploadProfileImage();
+      }
+
       const response = await fetch(apiUrl("/api/auth/profile"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, profilePic }),
+        body: JSON.stringify({ fullName, profilePic: nextProfilePic }),
         credentials: "include",
       });
       if (response.ok) {
         setMessage({ text: "Perfil atualizado com sucesso!", type: "success" });
+        setProfilePic(nextProfilePic);
+        setSelectedProfileFile(null);
+        clearLocalPreview();
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+
         onSuccess();
       } else {
-        const data = await response.json();
-        setMessage({ text: data.message || "Erro ao atualizar.", type: "error" });
+        setMessage({
+          text: await extractMessage(response, "Erro ao atualizar."),
+          type: "error",
+        });
       }
-    } catch {
-      setMessage({ text: "Erro de conexão.", type: "error" });
+    } catch (error) {
+      setMessage({
+        text: error instanceof Error ? error.message : "Erro de conexão.",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -122,9 +217,9 @@ const SettingsModal = ({
                   </label>
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full overflow-hidden bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 flex items-center justify-center font-extrabold text-xl shrink-0">
-                      {profilePic ? (
+                      {(localProfilePreview || profilePic) ? (
                         <img
-                          src={profilePic}
+                          src={localProfilePreview || profilePic}
                           alt="Foto de perfil"
                           className="w-full h-full object-cover"
                         />
@@ -134,15 +229,42 @@ const SettingsModal = ({
                     </div>
 
                     <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          className="hidden"
+                          onChange={handleProfileFileChange}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSelectProfileFile}
+                          disabled={isLoading || isUploadingImage}
+                          className="px-4 py-2 bg-fuchsia-50 dark:bg-fuchsia-900/30 border border-fuchsia-200 dark:border-fuchsia-800 rounded-xl text-sm font-bold text-fuchsia-700 dark:text-fuchsia-300 hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Selecionar arquivo
+                        </button>
+                        {selectedProfileFile && (
+                          <span className="text-xs font-medium text-gray-500 dark:text-zinc-500 truncate max-w-[220px]">
+                            {selectedProfileFile.name}
+                          </span>
+                        )}
+                      </div>
+
                       <input
                         type="url"
                         placeholder="https://exemplo.com/foto.jpg"
                         className="w-full p-3 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-fuchsia-600 outline-none font-medium text-gray-900 dark:text-zinc-100"
                         value={profilePic}
-                        onChange={(e) => setProfilePic(e.target.value)}
+                        onChange={(e) => {
+                          setProfilePic(e.target.value);
+                          setSelectedProfileFile(null);
+                          clearLocalPreview();
+                        }}
                       />
                       <p className="text-xs font-medium text-gray-500 dark:text-zinc-500">
-                        Cole a URL pública da imagem para usar como foto.
+                        Você pode enviar um arquivo (Cloudinary) ou colar uma URL pública.
                       </p>
                     </div>
                   </div>
@@ -172,10 +294,10 @@ const SettingsModal = ({
                 </div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isUploadingImage}
                   className="w-full bg-fuchsia-700 text-white font-bold py-3 rounded-xl hover:bg-fuchsia-800 active:scale-95 transition-all flex justify-center"
                 >
-                  {isLoading ? (
+                  {isLoading || isUploadingImage ? (
                     <Loader2 className="animate-spin" />
                   ) : (
                     "Salvar perfil"
