@@ -4,7 +4,12 @@ const Sidebar = ({ user, onLogout, onOpenSettings, currentView, setCurrentView }
   return (
     <aside className="flex flex-col shrink-0 w-64 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-colors duration-200">
       <div className="p-6">
-        <h2 className="text-xl font-extrabold text-gray-900 dark:text-zinc-100 tracking-tight">TaskNest</h2>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-fuchsia-600 text-white shadow-sm">
+            <LayoutDashboard size={16} />
+          </div>
+          <h2 className="text-xl font-extrabold text-gray-900 dark:text-zinc-100 tracking-tight">TaskNest</h2>
+        </div>
       </div>
 
       <div className="px-4 mb-2">
@@ -40,7 +45,15 @@ const Sidebar = ({ user, onLogout, onOpenSettings, currentView, setCurrentView }
         <div className="flex items-center justify-between group">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="flex items-center justify-center w-10 h-10 font-bold rounded-full bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 shrink-0">
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+              {user?.profilePic ? (
+                <img
+                  src={user.profilePic}
+                  alt="Foto de perfil"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user?.fullName?.charAt(0).toUpperCase() || "U"
+              )}
             </div>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-bold text-gray-800 dark:text-zinc-200 truncate">{user?.fullName}</span>
