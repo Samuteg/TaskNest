@@ -1,75 +1,126 @@
-import { LayoutDashboard, Users, Settings, LogOut } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Settings,
+  LogOut,
+  FolderKanban,
+} from "lucide-react";
 
-const Sidebar = ({ user, onLogout, onOpenSettings, currentView, setCurrentView }: any) => {
+const navItems = [
+  {
+    id: "projects",
+    label: "Projetos",
+    icon: LayoutDashboard,
+    views: ["projects", "tasks"],
+  },
+  { id: "team", label: "Equipe", icon: Users, views: ["team"] },
+];
+
+const Sidebar = ({
+  user,
+  onLogout,
+  onOpenSettings,
+  currentView,
+  setCurrentView,
+}: any) => {
   return (
-    <aside className="flex flex-col shrink-0 w-64 h-screen bg-white dark:bg-zinc-900 border-r border-gray-200 dark:border-zinc-800 transition-colors duration-200">
-      <div className="p-6">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-fuchsia-600 text-white shadow-sm">
-            <LayoutDashboard size={16} />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+        .font-syne { font-family: 'Syne', sans-serif; }
+        .font-mono-dm { font-family: 'DM Mono', monospace; }
+        .sidebar-btn { transition: background 0.15s, color 0.15s; }
+      `}</style>
+
+      <aside className="font-syne flex h-screen w-56 shrink-0 flex-col border-r border-white/[0.05] bg-[#0d0d0f]">
+        {/* ── LOGO ── */}
+        <div className="flex items-center gap-2.5 px-5 py-6">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4a044e]">
+            <FolderKanban size={13} className="text-white" />
           </div>
-          <h2 className="text-xl font-extrabold text-gray-900 dark:text-zinc-100 tracking-tight">TaskNest</h2>
+          <span className="text-base font-extrabold tracking-tight text-white">
+            Task<span className="text-fuchsia-400">Nest</span>
+          </span>
         </div>
-      </div>
 
-      <div className="px-4 mb-2">
-        <h3 className="text-xs font-bold tracking-wider text-gray-400 dark:text-zinc-500 uppercase mb-3 px-2">Navegação</h3>
-        <nav className="flex flex-col gap-1">
-          <button 
-            onClick={() => setCurrentView('projects')}
-            className={`flex items-center gap-3 w-full p-2.5 rounded-lg font-bold transition-all ${currentView === 'projects' || currentView === 'tasks' ? 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400' : 'text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-100'}`}
-          >
-            <LayoutDashboard size={18} />
-            <span className="text-sm">Projetos</span>
-          </button>
-          
-          <button 
-            onClick={() => setCurrentView('team')}
-            className={`flex items-center gap-3 w-full p-2.5 rounded-lg font-bold transition-all ${currentView === 'team' ? 'bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400' : 'text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-100'}`}
-          >
-            <Users size={18} />
-            <span className="text-sm">Equipe</span>
-          </button>
+        {/* ── NAV ── */}
+        <div className="px-3">
+          <p className="font-mono-dm mb-2 px-2 text-[9px] uppercase tracking-[0.2em] text-white/20">
+            Navegação
+          </p>
+          <nav className="flex flex-col gap-0.5">
+            {navItems.map(({ id, label, icon: Icon, views }) => {
+              const isActive = views.includes(currentView);
+              return (
+                <button
+                  key={id}
+                  onClick={() => setCurrentView(id)}
+                  className={`sidebar-btn flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium ${
+                    isActive
+                      ? "bg-[#4a044e] text-white"
+                      : "text-white/30 hover:bg-white/[0.04] hover:text-white/60"
+                  }`}
+                >
+                  <Icon size={15} />
+                  {label}
+                </button>
+              );
+            })}
 
-          <button 
-            onClick={onOpenSettings}
-            className="flex items-center gap-3 w-full p-2.5 rounded-lg font-bold text-gray-500 dark:text-zinc-400 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-100 transition-all"
-          >
-            <Settings size={18} />
-            <span className="text-sm">Configurações</span>
-          </button>
-        </nav>
-      </div>
+            {/* Settings (no active state — opens modal) */}
+            <button
+              onClick={onOpenSettings}
+              className="sidebar-btn flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-white/30 hover:bg-white/[0.04] hover:text-white/60"
+            >
+              <Settings size={15} />
+              Configurações
+            </button>
+          </nav>
+        </div>
 
-      <div className="mt-auto p-4 border-t border-gray-200 dark:border-zinc-800">
-        <div className="flex items-center justify-between group">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex items-center justify-center w-10 h-10 font-bold rounded-full bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 shrink-0">
-              {user?.profilePic ? (
-                <img
-                  src={user.profilePic}
-                  alt="Foto de perfil"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                user?.fullName?.charAt(0).toUpperCase() || "U"
-              )}
+        {/* ── DIVIDER ── */}
+        <div className="mx-5 mt-6 h-px bg-white/[0.05]" />
+
+        {/* ── USER CARD ── */}
+        <div className="mt-auto p-3">
+          <div className="group flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 transition-colors hover:border-white/[0.08]">
+            <div className="flex min-w-0 items-center gap-2.5">
+              {/* Avatar */}
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#4a044e] text-xs font-bold text-white">
+                {user?.profilePic ? (
+                  <img
+                    src={user.profilePic}
+                    alt="Foto de perfil"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  user?.fullName?.charAt(0).toUpperCase() || "U"
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold text-white/60">
+                  {user?.fullName}
+                </p>
+                <p className="font-mono-dm truncate text-[9px] text-white/20">
+                  {user?.email}
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-bold text-gray-800 dark:text-zinc-200 truncate">{user?.fullName}</span>
-              <span className="text-xs font-medium text-gray-500 dark:text-zinc-500 truncate">{user?.email}</span>
-            </div>
+
+            {/* Logout */}
+            <button
+              onClick={onLogout}
+              title="Sair"
+              className="shrink-0 rounded-lg p-1.5 text-white/15 transition-colors hover:bg-red-400/10 hover:text-red-400"
+            >
+              <LogOut size={13} />
+            </button>
           </div>
-          <button 
-            onClick={onLogout} 
-            className="p-2 text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Sair"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 
