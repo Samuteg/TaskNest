@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   Settings,
   GripVertical,
+  FolderKanban,
+  Calendar,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -31,43 +33,47 @@ export default function HomePage() {
     status: TaskStatus;
     label: string;
     emptyLabel: string;
-    badgeClass: string;
+    accent: string;
+    dot: string;
+    ring: string;
   }> = [
     {
       status: "todo",
       label: "Pendente",
       emptyLabel: "Sem tarefas pendentes.",
-      badgeClass:
-        "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+      accent: "text-amber-400",
+      dot: "bg-amber-400",
+      ring: "border-amber-400/20",
     },
     {
       status: "in-progress",
       label: "Em Progresso",
       emptyLabel: "Sem tarefas em progresso.",
-      badgeClass:
-        "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      accent: "text-fuchsia-400",
+      dot: "bg-fuchsia-400",
+      ring: "border-fuchsia-400/20",
     },
     {
       status: "done",
       label: "Concluídas",
       emptyLabel: "Sem tarefas concluídas.",
-      badgeClass:
-        "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+      accent: "text-emerald-400",
+      dot: "bg-emerald-400",
+      ring: "border-emerald-400/20",
     },
   ];
 
-  const cardColors = [
-    "bg-fuchsia-600",
-    "bg-pink-500",
-    "bg-purple-500",
-    "bg-rose-500",
+  const cardAccents = [
+    "bg-fuchsia-500",
     "bg-violet-500",
+    "bg-pink-500",
+    "bg-purple-600",
+    "bg-rose-500",
   ];
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "25/01/2026";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("pt-BR");
+    return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
   const sortTasksByDisplayOrder = (taskList: TaskItem[]) => {
@@ -76,17 +82,13 @@ export default function HomePage() {
         typeof a.order === "number" ? a.order : Number.MAX_SAFE_INTEGER;
       const bOrder =
         typeof b.order === "number" ? b.order : Number.MAX_SAFE_INTEGER;
-
       if (aOrder !== bOrder) return aOrder - bOrder;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   };
 
-  const getTasksByStatus = (taskList: TaskItem[], status: TaskStatus) => {
-    return sortTasksByDisplayOrder(
-      taskList.filter((task) => task.status === status),
-    );
-  };
+  const getTasksByStatus = (taskList: TaskItem[], status: TaskStatus) =>
+    sortTasksByDisplayOrder(taskList.filter((task) => task.status === status));
 
   const moveTaskInBoard = (
     taskList: TaskItem[],
@@ -95,71 +97,51 @@ export default function HomePage() {
     targetTaskId: string | null = null,
   ) => {
     if (targetTaskId && draggedTaskId === targetTaskId) return null;
-
     const columns = {
       todo: getTasksByStatus(taskList, "todo"),
       "in-progress": getTasksByStatus(taskList, "in-progress"),
       done: getTasksByStatus(taskList, "done"),
     } satisfies Record<TaskStatus, TaskItem[]>;
 
-    const draggedTask = taskList.find((task) => task._id === draggedTaskId);
+    const draggedTask = taskList.find((t) => t._id === draggedTaskId);
     if (!draggedTask) return null;
 
-    const sourceStatus = draggedTask.status;
-    const sourceTasks = columns[sourceStatus];
-    const sourceIndex = sourceTasks.findIndex(
-      (task) => task._id === draggedTaskId,
-    );
+    const sourceTasks = columns[draggedTask.status];
+    const sourceIndex = sourceTasks.findIndex((t) => t._id === draggedTaskId);
     if (sourceIndex < 0) return null;
-
     sourceTasks.splice(sourceIndex, 1);
 
     const movedTask = { ...draggedTask, status: targetStatus };
     const targetTasks = columns[targetStatus];
     const targetIndex = targetTaskId
-      ? targetTasks.findIndex((task) => task._id === targetTaskId)
+      ? targetTasks.findIndex((t) => t._id === targetTaskId)
       : -1;
-
     if (targetIndex >= 0) targetTasks.splice(targetIndex, 0, movedTask);
     else targetTasks.push(movedTask);
 
-    const normalizedColumns = {
-      todo: columns.todo.map((task, index) => ({ ...task, order: index })),
-      "in-progress": columns["in-progress"].map((task, index) => ({
-        ...task,
-        order: index,
-      })),
-      done: columns.done.map((task, index) => ({ ...task, order: index })),
+    const normalized = {
+      todo: columns.todo.map((t, i) => ({ ...t, order: i })),
+      "in-progress": columns["in-progress"].map((t, i) => ({ ...t, order: i })),
+      done: columns.done.map((t, i) => ({ ...t, order: i })),
     } satisfies Record<TaskStatus, TaskItem[]>;
 
-    return kanbanColumns.flatMap((column) => normalizedColumns[column.status]);
+    return kanbanColumns.flatMap((col) => normalized[col.status]);
   };
+
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  // CONTROLO DO MODO ESCURO
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // always dark to match system
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem("tasknest-theme");
-
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      return;
-    }
-
-    if (savedTheme === "light") {
-      setDarkMode(false);
-      return;
-    }
-
-    setDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const saved = window.localStorage.getItem("tasknest-theme");
+    if (saved === "dark") setDarkMode(true);
+    else if (saved === "light") setDarkMode(false);
+    else setDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
   }, []);
 
   useEffect(() => {
-    const html = document.documentElement;
-    html.classList.toggle("dark", darkMode);
+    document.documentElement.classList.toggle("dark", darkMode);
     window.localStorage.setItem("tasknest-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
@@ -173,7 +155,6 @@ export default function HomePage() {
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const [isReorderingTasks, setIsReorderingTasks] = useState(false);
-
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
@@ -189,7 +170,7 @@ export default function HomePage() {
       });
       if (res.ok) setUser(await res.json());
       else router.push("/login");
-    } catch (err) {
+    } catch {
       router.push("/login");
     }
   };
@@ -210,10 +191,7 @@ export default function HomePage() {
       const res = await fetch(apiUrl(`/api/tasks/${projId}`), {
         credentials: "include",
       });
-      if (res.ok) {
-        const fetchedTasks = await res.json();
-        setTasks(sortTasksByDisplayOrder(fetchedTasks));
-      }
+      if (res.ok) setTasks(sortTasksByDisplayOrder(await res.json()));
     } catch (err) {
       console.error(err);
     }
@@ -243,7 +221,7 @@ export default function HomePage() {
         credentials: "include",
       });
       fetchProjects();
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDeleteProject = async (
@@ -259,7 +237,7 @@ export default function HomePage() {
       });
       if (activeProjectId === projectId) setCurrentView("projects");
       fetchProjects();
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -270,7 +248,7 @@ export default function HomePage() {
         credentials: "include",
       });
       if (activeProjectId) fetchTasks(activeProjectId);
-    } catch (err) {}
+    } catch {}
   };
 
   const handleLogout = async () => {
@@ -290,58 +268,46 @@ export default function HomePage() {
     updatedTasks: TaskItem[],
     previousTasks: TaskItem[],
   ) => {
-    const previousTasksById = new Map(
-      previousTasks.map((task) => [task._id, task] as const),
-    );
-    const changedTasks = updatedTasks.filter((task) => {
-      const previousTask = previousTasksById.get(task._id);
-      if (!previousTask) return true;
-
+    const prevById = new Map(previousTasks.map((t) => [t._id, t]));
+    const changed = updatedTasks.filter((t) => {
+      const prev = prevById.get(t._id);
       return (
-        previousTask.status !== task.status ||
-        (previousTask.order ?? -1) !== (task.order ?? -1)
+        !prev ||
+        prev.status !== t.status ||
+        (prev.order ?? -1) !== (t.order ?? -1)
       );
     });
-
-    if (changedTasks.length === 0) return;
-
+    if (!changed.length) return;
     const responses = await Promise.all(
-      changedTasks.map((task) =>
-        fetch(apiUrl(`/api/tasks/${task._id}`), {
+      changed.map((t) =>
+        fetch(apiUrl(`/api/tasks/${t._id}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: task.status,
-            order: task.order ?? 0,
-          }),
+          body: JSON.stringify({ status: t.status, order: t.order ?? 0 }),
           credentials: "include",
         }),
       ),
     );
-
-    if (responses.some((response) => !response.ok)) {
+    if (responses.some((r) => !r.ok))
       throw new Error("Não foi possível persistir o quadro Kanban.");
-    }
   };
 
   const handleTaskDragStart = (
-    event: React.DragEvent<HTMLElement>,
+    e: React.DragEvent<HTMLElement>,
     taskId: string,
   ) => {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", taskId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", taskId);
     setDraggedTaskId(taskId);
   };
 
   const handleTaskDragOverTask = (
-    event: React.DragEvent<HTMLElement>,
+    e: React.DragEvent<HTMLElement>,
     taskStatus: TaskStatus,
     taskId: string,
   ) => {
-    event.preventDefault();
-
+    e.preventDefault();
     if (!draggedTaskId) return;
-
     if (taskId !== dragOverTaskId || taskStatus !== dragOverStatus) {
       setDragOverTaskId(taskId);
       setDragOverStatus(taskStatus);
@@ -349,13 +315,11 @@ export default function HomePage() {
   };
 
   const handleTaskDragOverColumn = (
-    event: React.DragEvent<HTMLElement>,
+    e: React.DragEvent<HTMLElement>,
     taskStatus: TaskStatus,
   ) => {
-    event.preventDefault();
-
+    e.preventDefault();
     if (!draggedTaskId) return;
-
     if (taskStatus !== dragOverStatus || dragOverTaskId !== null) {
       setDragOverStatus(taskStatus);
       setDragOverTaskId(null);
@@ -369,14 +333,12 @@ export default function HomePage() {
   };
 
   const handleTaskDrop = async (
-    event: React.DragEvent<HTMLElement>,
+    e: React.DragEvent<HTMLElement>,
     targetStatus: TaskStatus,
     targetTaskId: string | null = null,
   ) => {
-    event.preventDefault();
-
+    e.preventDefault();
     if (!draggedTaskId) return;
-
     const previousTasks = tasks;
     const reorderedTasks = moveTaskInBoard(
       tasks,
@@ -384,16 +346,12 @@ export default function HomePage() {
       targetStatus,
       targetTaskId,
     );
-
     setDraggedTaskId(null);
     setDragOverTaskId(null);
     setDragOverStatus(null);
-
     if (!reorderedTasks || !activeProjectId) return;
-
     setTasks(reorderedTasks);
     setIsReorderingTasks(true);
-
     try {
       await persistTasksBoard(reorderedTasks, previousTasks);
     } catch (err) {
@@ -404,357 +362,468 @@ export default function HomePage() {
     }
   };
 
+  // ── Loading state ──
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f8fafc] dark:bg-zinc-950 text-fuchsia-700">
-        <Loader2 className="animate-spin" size={40} />
+      <div className="flex h-screen items-center justify-center bg-[#0d0d0f]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#4a044e]">
+            <FolderKanban size={20} className="text-white" />
+          </div>
+          <Loader2 className="animate-spin text-fuchsia-400" size={24} />
+        </div>
       </div>
     );
+
   if (!user) return null;
 
+  // ── Shared styles ──
+  const sectionTitle =
+    "font-syne text-2xl font-extrabold tracking-tight text-white";
+  const sectionSubtitle = "font-mono-dm text-xs text-white/30 mt-1";
+
   return (
-    <div className="flex min-h-screen bg-[#f8fafc] dark:bg-zinc-950 font-sans transition-colors duration-200">
-      <Sidebar
-        user={user}
-        onLogout={handleLogout}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        currentView={currentView}
-        setCurrentView={setCurrentView}
-      />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+        .font-syne { font-family: 'Syne', sans-serif; }
+        .font-mono-dm { font-family: 'DM Mono', monospace; }
 
-      <main className="flex-1 p-8 overflow-y-auto h-screen">
-        <div className="max-w-6xl mx-auto">
-          {currentView === "projects" && (
-            <>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                  <h1 className="text-3xl font-extrabold text-gray-900 dark:text-zinc-50 mb-1">
-                    Meus Projetos
-                  </h1>
-                  <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                    Bem-vindo, {user.fullName}! Gerencie seus projetos por aqui.
-                  </p>
-                </div>
-                <button
-                  onClick={handleCreateProject}
-                  className="flex items-center gap-2 bg-fuchsia-700 hover:bg-fuchsia-800 active:scale-95 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md"
-                >
-                  <Plus size={18} /> Novo Projeto
-                </button>
-              </div>
+        .grid-bg {
+          background-image:
+            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+          background-size: 48px 48px;
+        }
 
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {projects.map((proj: any, index: number) => {
-                  const colorClass = cardColors[index % cardColors.length];
-                  return (
-                    <div
-                      key={proj._id}
-                      onClick={() => openProject(proj._id)}
-                      className="group relative bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border-2 border-transparent dark:border-zinc-800 hover:border-fuchsia-200 dark:hover:border-fuchsia-800 overflow-hidden cursor-pointer hover:shadow-lg transition-all flex flex-col min-h-[180px]"
-                    >
-                      <div
-                        className={`h-2 w-full absolute top-0 left-0 ${colorClass}`}
-                      />
-                      <div className="p-6 flex-1 flex flex-col border border-t-0 border-gray-100 dark:border-zinc-800 rounded-b-2xl">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-extrabold text-xl shadow-sm ${colorClass}`}
-                            >
-                              {proj.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <h3 className="font-extrabold text-gray-900 dark:text-zinc-100 truncate max-w-[180px]">
-                                {proj.name}
-                              </h3>
-                              <p className="text-xs font-bold text-gray-400 dark:text-zinc-500">
-                                {formatDate(proj.createdAt)}
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={(e) => handleDeleteProject(proj._id, e)}
-                            className="p-2 text-gray-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-zinc-400 line-clamp-2 mt-2">
-                          Clique aqui para gerenciar as tarefas deste projeto.
-                        </p>
-                        <div className="mt-auto pt-4 flex items-center justify-between text-xs font-bold text-gray-400 dark:text-zinc-500">
-                          <span>Acesso rápido</span>
-                          <span className="flex items-center text-fuchsia-600 dark:text-fuchsia-400 group-hover:translate-x-1 transition-transform">
-                            Abrir &rarr;
-                          </span>
-                        </div>
+        .task-card { transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.15s; }
+        .task-card:hover { transform: translateY(-1px); }
+
+        .project-card { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
+        .project-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(74,4,78,0.2); }
+
+        .btn-fuchsia { transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s; }
+        .btn-fuchsia:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 0 20px rgba(74,4,78,0.4); }
+        .btn-fuchsia:active { transform: scale(0.97); }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+      `}</style>
+
+      <div className="font-syne flex min-h-screen bg-[#0d0d0f] text-white">
+        <div className="grid-bg flex min-h-screen w-full">
+          {/* ── SIDEBAR (passthrough) ── */}
+          <Sidebar
+            user={user}
+            onLogout={handleLogout}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+          />
+
+          {/* ── MAIN ── */}
+          <main className="flex-1 overflow-y-auto h-screen px-6 py-8 md:px-10">
+            <div className="mx-auto max-w-6xl">
+              {/* ════════════════════════════
+                  VIEW: PROJECTS
+              ════════════════════════════ */}
+              {currentView === "projects" && (
+                <>
+                  {/* Header */}
+                  <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="font-mono-dm mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-fuchsia-400/50">
+                        <span className="h-px w-4 bg-fuchsia-400/30" />
+                        área de trabalho
                       </div>
+                      <h1 className={sectionTitle}>Meus Projetos</h1>
+                      <p className={sectionSubtitle}>
+                        Bem-vindo, {user.fullName}. Selecione ou crie um
+                        projeto.
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {currentView === "tasks" && activeProjectId && (
-            <>
-              <button
-                onClick={() => setCurrentView("projects")}
-                className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-fuchsia-700 dark:hover:text-fuchsia-400 mb-6 font-bold transition-colors"
-              >
-                <ArrowLeft size={18} /> Voltar para projetos
-              </button>
-
-              <div className="flex justify-between items-end border-b-2 border-gray-100 dark:border-zinc-800 pb-5 mb-6">
-                <div>
-                  <h1 className="text-3xl font-extrabold text-gray-900 dark:text-zinc-50 mb-1">
-                    {activeProject?.name}
-                  </h1>
-                  <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                    Gerencie as tarefas deste projeto.
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setEditingTask(null);
-                    setIsTaskModalOpen(true);
-                  }}
-                  className="bg-fuchsia-700 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-fuchsia-800 active:scale-95 transition-all shadow-md"
-                >
-                  + Nova Tarefa
-                </button>
-              </div>
-
-              <div className="mb-4 flex items-center justify-between text-xs font-bold text-gray-400 dark:text-zinc-500">
-                <span>Quadro Kanban: arraste tarefas entre as colunas.</span>
-                {isReorderingTasks && (
-                  <span className="inline-flex items-center gap-1.5 text-fuchsia-600 dark:text-fuchsia-400">
-                    <Loader2 size={14} className="animate-spin" />
-                    Salvando quadro...
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {kanbanColumns.map((column) => {
-                  const columnTasks = getTasksByStatus(tasks, column.status);
-                  const isColumnDragOver =
-                    dragOverStatus === column.status && !dragOverTaskId;
-
-                  return (
-                    <div
-                      key={column.status}
-                      onDragOver={(event) =>
-                        handleTaskDragOverColumn(event, column.status)
-                      }
-                      onDrop={(event) => handleTaskDrop(event, column.status)}
-                      className={`rounded-2xl border-2 bg-white dark:bg-zinc-900 shadow-sm min-h-[320px] transition-all ${
-                        isColumnDragOver
-                          ? "border-fuchsia-300 dark:border-fuchsia-700 ring-2 ring-fuchsia-100 dark:ring-fuchsia-900/30"
-                          : "border-gray-100 dark:border-zinc-800"
-                      }`}
+                    <button
+                      onClick={handleCreateProject}
+                      className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-3 text-sm font-bold text-white"
                     >
-                      <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
-                        <span className="text-sm font-extrabold text-gray-800 dark:text-zinc-100">
-                          {column.label}
-                        </span>
-                        <span
-                          className={`px-2.5 py-1 text-[11px] font-extrabold rounded-full ${column.badgeClass}`}
-                        >
-                          {columnTasks.length}
-                        </span>
+                      <Plus size={16} /> Novo Projeto
+                    </button>
+                  </div>
+
+                  {/* Project grid */}
+                  {projects.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.07] py-20 text-center">
+                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+                        <FolderKanban size={24} className="text-white/20" />
                       </div>
+                      <p className="font-mono-dm text-xs text-white/25 uppercase tracking-widest mb-4">
+                        Nenhum projeto ainda
+                      </p>
+                      <button
+                        onClick={handleCreateProject}
+                        className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-4 py-2.5 text-sm font-bold text-white"
+                      >
+                        <Plus size={14} /> Criar primeiro projeto
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {projects.map((proj: any, index: number) => {
+                        const accent = cardAccents[index % cardAccents.length];
+                        return (
+                          <div
+                            key={proj._id}
+                            onClick={() => openProject(proj._id)}
+                            className="project-card group relative cursor-pointer overflow-hidden rounded-2xl border border-white/[0.06] bg-[#131316]"
+                          >
+                            {/* Top accent bar */}
+                            <div className={`h-[3px] w-full ${accent}`} />
 
-                      <div className="p-3 space-y-3 min-h-[240px]">
-                        {columnTasks.length > 0 ? (
-                          columnTasks.map((task) => {
-                            const isDragging = draggedTaskId === task._id;
-                            const isDragOverTask =
-                              dragOverTaskId === task._id &&
-                              draggedTaskId !== task._id;
-
-                            return (
-                              <article
-                                key={task._id}
-                                draggable
-                                onDragStart={(event) =>
-                                  handleTaskDragStart(event, task._id)
-                                }
-                                onDragOver={(event) => {
-                                  event.stopPropagation();
-                                  handleTaskDragOverTask(
-                                    event,
-                                    column.status,
-                                    task._id,
-                                  );
-                                }}
-                                onDrop={(event) => {
-                                  event.stopPropagation();
-                                  handleTaskDrop(
-                                    event,
-                                    column.status,
-                                    task._id,
-                                  );
-                                }}
-                                onDragEnd={handleTaskDragEnd}
-                                className={`p-4 border rounded-xl bg-white dark:bg-zinc-900 shadow-sm transition-all cursor-move group ${
-                                  isDragging
-                                    ? "opacity-60 border-fuchsia-400 dark:border-fuchsia-700"
-                                    : "border-gray-200 dark:border-zinc-700 hover:border-fuchsia-300 dark:hover:border-fuchsia-700"
-                                } ${
-                                  isDragOverTask
-                                    ? "ring-2 ring-fuchsia-200 dark:ring-fuchsia-800"
-                                    : ""
-                                }`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <GripVertical
-                                    size={16}
-                                    className="text-gray-300 dark:text-zinc-600 mt-1 shrink-0"
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <h3
-                                      className={`font-extrabold text-gray-900 dark:text-zinc-100 truncate ${
-                                        task.status === "done"
-                                          ? "line-through text-gray-400 dark:text-zinc-500"
-                                          : ""
-                                      }`}
-                                    >
-                                      {task.title}
+                            <div className="p-5">
+                              <div className="mb-4 flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`flex h-11 w-11 items-center justify-center rounded-xl text-white font-extrabold text-lg ${accent}`}
+                                  >
+                                    {proj.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <h3 className="font-bold text-white truncate max-w-[160px]">
+                                      {proj.name}
                                     </h3>
-                                    {task.description && (
-                                      <p className="text-xs font-medium text-gray-500 dark:text-zinc-400 mt-1 line-clamp-3">
-                                        {task.description}
-                                      </p>
-                                    )}
+                                    <div className="font-mono-dm mt-0.5 flex items-center gap-1 text-[10px] text-white/25">
+                                      <Calendar size={9} />
+                                      {formatDate(proj.createdAt)}
+                                    </div>
                                   </div>
                                 </div>
+                                <button
+                                  onClick={(e) =>
+                                    handleDeleteProject(proj._id, e)
+                                  }
+                                  className="rounded-lg p-1.5 text-white/15 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
 
-                                <div className="mt-3 flex items-center justify-end gap-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => {
-                                      setEditingTask(task);
-                                      setIsTaskModalOpen(true);
-                                    }}
-                                    className="p-2 text-gray-400 dark:text-zinc-500 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 rounded-lg transition-colors"
-                                  >
-                                    <Edit3 size={16} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteTask(task._id)}
-                                    className="p-2 text-gray-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              </article>
-                            );
-                          })
-                        ) : (
-                          <div className="min-h-[160px] h-full rounded-xl border border-dashed border-gray-200 dark:border-zinc-700 flex items-center justify-center px-4 text-center text-xs font-bold text-gray-400 dark:text-zinc-500">
-                            {column.emptyLabel}
+                              <p className="text-xs text-white/25 line-clamp-2 mb-5">
+                                Clique para gerenciar as tarefas deste projeto.
+                              </p>
+
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono-dm text-[10px] text-white/15 uppercase tracking-wider">
+                                  acesso rápido
+                                </span>
+                                <span className="font-mono-dm text-[10px] text-fuchsia-400/50 transition-all group-hover:text-fuchsia-400 group-hover:translate-x-0.5">
+                                  Abrir →
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-
-              {tasks.length === 0 && (
-                <div className="mt-6 text-center py-10 bg-white dark:bg-zinc-900 border-2 border-dashed border-gray-200 dark:border-zinc-800 rounded-2xl">
-                  <p className="text-gray-500 dark:text-zinc-400 font-bold mb-3">
-                    Nenhuma tarefa neste projeto ainda.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setEditingTask(null);
-                      setIsTaskModalOpen(true);
-                    }}
-                    className="text-fuchsia-700 dark:text-fuchsia-400 font-extrabold hover:underline"
-                  >
-                    Adicione sua primeira tarefa
-                  </button>
-                </div>
+                  )}
+                </>
               )}
-            </>
-          )}
 
-          {currentView === "team" && (
-            <>
-              <div className="mb-8">
-                <h1 className="text-3xl font-extrabold text-gray-900 dark:text-zinc-50 mb-1">
-                  Membros da Equipe
-                </h1>
-                <p className="text-gray-500 dark:text-zinc-400 font-medium text-sm">
-                  Gerencie quem tem acesso aos seus projetos.
-                </p>
-              </div>
+              {/* ════════════════════════════
+                  VIEW: TASKS / KANBAN
+              ════════════════════════════ */}
+              {currentView === "tasks" && activeProjectId && (
+                <>
+                  {/* Back */}
+                  <button
+                    onClick={() => setCurrentView("projects")}
+                    className="mb-8 group inline-flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] px-3.5 py-2 text-xs font-medium text-white/35 transition-all hover:border-white/[0.12] hover:text-white/60"
+                  >
+                    <ArrowLeft
+                      size={13}
+                      className="transition-transform group-hover:-translate-x-0.5"
+                    />
+                    Voltar aos projetos
+                  </button>
 
-              <div className="bg-white dark:bg-zinc-900 rounded-2xl border-2 border-gray-100 dark:border-zinc-800 shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 dark:bg-zinc-800/50 border-b-2 border-gray-100 dark:border-zinc-800">
-                    <tr>
-                      <th className="px-6 py-4 text-xs font-extrabold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                        Membro
-                      </th>
-                      <th className="px-6 py-4 text-xs font-extrabold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                        Função
-                      </th>
-                      <th className="px-6 py-4 text-xs font-extrabold text-gray-400 dark:text-zinc-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-4"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-gray-50 dark:divide-zinc-800">
-                    <tr className="hover:bg-fuchsia-50/50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-700 dark:text-fuchsia-400 flex items-center justify-center font-extrabold">
-                            {user.fullName.charAt(0).toUpperCase()}
+                  {/* Header */}
+                  <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <div className="font-mono-dm mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-fuchsia-400/50">
+                        <span className="h-px w-4 bg-fuchsia-400/30" />
+                        kanban
+                      </div>
+                      <h1 className={sectionTitle}>{activeProject?.name}</h1>
+                      <p className={sectionSubtitle}>
+                        Arraste tarefas entre colunas para atualizar o status.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isReorderingTasks && (
+                        <span className="font-mono-dm inline-flex items-center gap-1.5 text-[10px] text-fuchsia-400/50">
+                          <Loader2 size={12} className="animate-spin" />{" "}
+                          Salvando…
+                        </span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setEditingTask(null);
+                          setIsTaskModalOpen(true);
+                        }}
+                        className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-3 text-sm font-bold text-white"
+                      >
+                        <Plus size={16} /> Nova Tarefa
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Kanban board */}
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    {kanbanColumns.map((column) => {
+                      const columnTasks = getTasksByStatus(
+                        tasks,
+                        column.status,
+                      );
+                      const isColDragOver =
+                        dragOverStatus === column.status && !dragOverTaskId;
+
+                      return (
+                        <div
+                          key={column.status}
+                          onDragOver={(e) =>
+                            handleTaskDragOverColumn(e, column.status)
+                          }
+                          onDrop={(e) => handleTaskDrop(e, column.status)}
+                          className={`rounded-2xl border bg-[#131316] transition-all ${
+                            isColDragOver
+                              ? `border-[#4a044e]/50 ring-1 ring-[#4a044e]/20`
+                              : "border-white/[0.06]"
+                          }`}
+                        >
+                          {/* Column header */}
+                          <div className="flex items-center justify-between border-b border-white/[0.05] px-4 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${column.dot}`}
+                              />
+                              <span className="font-mono-dm text-[11px] font-medium uppercase tracking-[0.12em] text-white/50">
+                                {column.label}
+                              </span>
+                            </div>
+                            <span
+                              className={`font-mono-dm rounded-full border px-2 py-0.5 text-[10px] font-medium ${column.ring} ${column.accent}`}
+                            >
+                              {columnTasks.length}
+                            </span>
                           </div>
-                          <div>
-                            <div className="text-sm font-extrabold text-gray-900 dark:text-zinc-100">
-                              {user.fullName} (Tu)
-                            </div>
-                            <div className="text-xs font-bold text-gray-500 dark:text-zinc-500">
-                              {user.email}
-                            </div>
+
+                          {/* Tasks */}
+                          <div className="min-h-[260px] space-y-2 p-3">
+                            {columnTasks.length > 0 ? (
+                              columnTasks.map((task) => {
+                                const isDragging = draggedTaskId === task._id;
+                                const isDragOver =
+                                  dragOverTaskId === task._id &&
+                                  draggedTaskId !== task._id;
+
+                                return (
+                                  <article
+                                    key={task._id}
+                                    draggable
+                                    onDragStart={(e) =>
+                                      handleTaskDragStart(e, task._id)
+                                    }
+                                    onDragOver={(e) => {
+                                      e.stopPropagation();
+                                      handleTaskDragOverTask(
+                                        e,
+                                        column.status,
+                                        task._id,
+                                      );
+                                    }}
+                                    onDrop={(e) => {
+                                      e.stopPropagation();
+                                      handleTaskDrop(
+                                        e,
+                                        column.status,
+                                        task._id,
+                                      );
+                                    }}
+                                    onDragEnd={handleTaskDragEnd}
+                                    className={`task-card group cursor-move rounded-xl border bg-[#0d0d0f] p-4 ${
+                                      isDragging
+                                        ? "opacity-50 border-[#4a044e]/40"
+                                        : isDragOver
+                                          ? "border-[#4a044e]/60 ring-1 ring-[#4a044e]/20"
+                                          : "border-white/[0.06] hover:border-white/[0.12]"
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-2.5">
+                                      <GripVertical
+                                        size={14}
+                                        className="mt-0.5 shrink-0 text-white/10"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <h3
+                                          className={`text-sm font-bold leading-snug ${
+                                            task.status === "done"
+                                              ? "line-through text-white/20"
+                                              : "text-white/80"
+                                          }`}
+                                        >
+                                          {task.title}
+                                        </h3>
+                                        {task.description && (
+                                          <p className="mt-1.5 text-xs leading-relaxed text-white/25 line-clamp-2">
+                                            {task.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="mt-3 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                      <button
+                                        onClick={() => {
+                                          setEditingTask(task);
+                                          setIsTaskModalOpen(true);
+                                        }}
+                                        className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-fuchsia-400/10 hover:text-fuchsia-400"
+                                      >
+                                        <Edit3 size={13} />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleDeleteTask(task._id)
+                                        }
+                                        className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </article>
+                                );
+                              })
+                            ) : (
+                              <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-white/[0.05]">
+                                <p className="font-mono-dm text-[10px] uppercase tracking-wider text-white/15">
+                                  {column.emptyLabel}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-5 text-sm text-gray-600 dark:text-zinc-400 font-bold">
-                        Proprietário
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className="px-3 py-1 text-[11px] font-extrabold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/20 rounded-full uppercase">
-                          Ativo
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 text-right">
-                        <button className="p-2 text-gray-400 dark:text-zinc-500 hover:text-fuchsia-600 dark:hover:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 rounded-lg transition-colors">
-                          <Settings size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={4} className="px-6 py-10 text-center">
-                        <p className="text-gray-400 dark:text-zinc-500 font-bold text-sm mb-4">
-                          Deseja colaborar com outros usuários?
-                        </p>
-                        <button className="inline-flex items-center gap-2 bg-fuchsia-50 dark:bg-fuchsia-900/20 text-fuchsia-700 dark:text-fuchsia-400 px-5 py-2.5 rounded-xl font-extrabold text-sm hover:bg-fuchsia-100 dark:hover:bg-fuchsia-900/40 transition-colors">
-                          <Plus size={16} /> Convidar membro
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+                      );
+                    })}
+                  </div>
+
+                  {/* Empty state */}
+                  {tasks.length === 0 && (
+                    <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/[0.06] py-16 text-center">
+                      <p className="font-mono-dm text-xs uppercase tracking-widest text-white/20 mb-4">
+                        Nenhuma tarefa neste projeto ainda
+                      </p>
+                      <button
+                        onClick={() => {
+                          setEditingTask(null);
+                          setIsTaskModalOpen(true);
+                        }}
+                        className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-4 py-2.5 text-sm font-bold text-white"
+                      >
+                        <Plus size={14} /> Adicionar primeira tarefa
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ════════════════════════════
+                  VIEW: TEAM
+              ════════════════════════════ */}
+              {currentView === "team" && (
+                <>
+                  <div className="mb-10">
+                    <div className="font-mono-dm mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-fuchsia-400/50">
+                      <span className="h-px w-4 bg-fuchsia-400/30" />
+                      colaboração
+                    </div>
+                    <h1 className={sectionTitle}>Membros da Equipe</h1>
+                    <p className={sectionSubtitle}>
+                      Gerencie quem tem acesso aos seus projetos.
+                    </p>
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#131316]">
+                    <table className="w-full border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.05]">
+                          {["Membro", "Função", "Status", ""].map((h) => (
+                            <th
+                              key={h}
+                              className="font-mono-dm px-6 py-4 text-[10px] uppercase tracking-[0.15em] text-white/20"
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.04]">
+                        <tr className="transition-colors hover:bg-white/[0.02]">
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4a044e] text-sm font-bold text-white">
+                                {user.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="text-sm font-bold text-white/80">
+                                  {user.fullName}
+                                </div>
+                                <div className="font-mono-dm text-[10px] text-white/25">
+                                  {user.email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="font-mono-dm text-[11px] text-white/30">
+                              Proprietário
+                            </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="font-mono-dm inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-2.5 py-1 text-[10px] uppercase tracking-wider text-emerald-400">
+                              <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                              Ativo
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <button
+                              onClick={() => setIsSettingsOpen(true)}
+                              className="rounded-lg p-2 text-white/15 transition-colors hover:bg-white/[0.04] hover:text-white/40"
+                            >
+                              <Settings size={15} />
+                            </button>
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td colSpan={4} className="px-6 py-12 text-center">
+                            <p className="font-mono-dm mb-5 text-xs text-white/20">
+                              Deseja colaborar com outros usuários?
+                            </p>
+                            <button className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-2.5 text-sm font-bold text-white">
+                              <Plus size={14} /> Convidar membro
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
 
       <TaskModal
         isOpen={isTaskModalOpen}
@@ -772,6 +841,6 @@ export default function HomePage() {
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
-    </div>
+    </>
   );
 }
