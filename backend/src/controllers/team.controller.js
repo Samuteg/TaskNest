@@ -49,14 +49,25 @@ export const createTeamInvite = async (req, res) => {
       return res.status(400).json({ message: "Você não pode convidar a si mesmo." });
     }
 
-    const existingInvite = await TeamInvite.findOne({
+    const latestInvite = await TeamInvite.findOne({
       invitedBy: req.user._id,
       email: normalizedEmail,
-      status: "pending",
-    });
+    }).sort({ updatedAt: -1, createdAt: -1 });
 
-    if (existingInvite) {
-      return res.status(200).json(existingInvite);
+    if (latestInvite?.status === "accepted") {
+      return res.status(409).json({
+        message: "Este usuário já faz parte da equipe.",
+      });
+    }
+
+    if (latestInvite?.status === "pending") {
+      return res.status(200).json(latestInvite);
+    }
+
+    if (latestInvite?.status === "declined") {
+      latestInvite.status = "pending";
+      await latestInvite.save();
+      return res.status(200).json(latestInvite);
     }
 
     const invite = await TeamInvite.create({
@@ -87,13 +98,21 @@ export const cancelTeamInvite = async (req, res) => {
       return res.status(404).json({ message: "Convite não encontrado." });
     }
 
-    if (invite.status !== "pending") {
-      return res.status(400).json({
-        message: "Só é possível cancelar convites pendentes.",
+    const previousStatus = invite.status;
+
+    if (previousStatus === "accepted") {
+      await TeamInvite.deleteMany({
+        invitedBy: req.user._id,
+        email: invite.email,
       });
+      return res.status(200).json({ message: "Membro removido da equipe com sucesso." });
     }
 
     await invite.deleteOne();
+
+    if (previousStatus === "declined") {
+      return res.status(200).json({ message: "Registro de convite removido com sucesso." });
+    }
 
     res.status(200).json({ message: "Convite cancelado com sucesso." });
   } catch (error) {
@@ -133,12 +152,14 @@ export const respondToTeamInvite = async (req, res) => {
       return res.status(200).json(invite);
     }
 
-    if (invite.status !== "pending") {
+    if (invite.status === "accepted") {
       return res.status(400).json({
-        message: "Este convite já foi respondido e não pode ser alterado.",
+        message: "Este convite já foi aceito. Peça ao proprietário para remover você da equipe.",
       });
     }
 
+    // Permite transição de pending -> accepted/declined
+    // e também declined -> accepted (reconsideração do convite)
     invite.status = status;
     await invite.save();
 

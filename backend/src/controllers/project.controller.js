@@ -1,5 +1,6 @@
 import Project from "../models/project.model.js";
 import Task from "../models/Task.js"; // Precisamos importar o Task para apagar as tarefas associadas
+import { getAccessibleOwnerIds } from "../lib/teamAccess.js";
 
 // 1. CRIAR UM PROJETO
 export const createProject = async (req, res) => {
@@ -27,8 +28,12 @@ export const createProject = async (req, res) => {
 // 2. LISTAR TODOS OS PROJETOS DO USUÁRIO
 export const getProjects = async (req, res) => {
   try {
-    // Busca apenas os projetos que pertencem ao usuário logado
-    const projects = await Project.find({ user: req.user._id }).sort({ createdAt: -1 });
+    // Lista projetos próprios + projetos de usuários que convidaram este usuário e tiveram convite aceito
+    const accessibleOwnerIds = await getAccessibleOwnerIds(req.user);
+    const projects = await Project.find({
+      user: { $in: accessibleOwnerIds },
+    }).sort({ createdAt: -1 });
+
     res.status(200).json(projects);
   } catch (error) {
     console.error("Erro em getProjects:", error.message);

@@ -288,7 +288,21 @@ export default function HomePage() {
 
         if (receivedRes.ok) {
           const invites: ReceivedTeamInviteItem[] = await receivedRes.json();
-          setReceivedTeamInvites(invites);
+          const statusPriority: Record<TeamInviteStatus, number> = {
+            pending: 0,
+            declined: 1,
+            accepted: 2,
+          };
+          setReceivedTeamInvites(
+            [...invites].sort((a, b) => {
+              const aPriority = statusPriority[a.status] ?? 99;
+              const bPriority = statusPriority[b.status] ?? 99;
+              if (aPriority !== bPriority) return aPriority - bPriority;
+              return (
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+              );
+            }),
+          );
         } else {
           setReceivedTeamInvites([]);
         }
@@ -410,8 +424,18 @@ export default function HomePage() {
     }
   };
 
-  const handleCancelInvite = async (inviteId: string) => {
-    if (!window.confirm("Cancelar este convite pendente?")) return;
+  const handleCancelInvite = async (
+    inviteId: string,
+    status: TeamInviteStatus,
+    inviteEmail: string,
+  ) => {
+    const confirmationMessage =
+      status === "accepted"
+        ? "Remover este membro da equipe?"
+        : status === "declined"
+          ? "Remover este registro de convite?"
+          : "Cancelar este convite pendente?";
+    if (!window.confirm(confirmationMessage)) return;
 
     setCancelingInviteId(inviteId);
     try {
@@ -428,8 +452,17 @@ export default function HomePage() {
         return;
       }
 
-      setTeamInvites((prev) => prev.filter((invite) => invite._id !== inviteId));
-      window.alert("Convite cancelado com sucesso.");
+      setTeamInvites((prev) =>
+        status === "accepted"
+          ? prev.filter((invite) => invite.email !== inviteEmail)
+          : prev.filter((invite) => invite._id !== inviteId),
+      );
+      window.alert(
+        payload?.message ||
+          (status === "accepted"
+            ? "Membro removido da equipe com sucesso."
+            : "Convite removido com sucesso."),
+      );
     } catch (error) {
       console.error("Erro ao cancelar convite:", error);
       window.alert("Erro ao cancelar convite. Tente novamente.");
@@ -1100,7 +1133,7 @@ export default function HomePage() {
                                   </span>
                                 </td>
                                 <td className="px-6 py-5 text-right">
-                                  {invite.status === "pending" && (
+                                  {invite.status !== "accepted" && (
                                     <div className="inline-flex items-center gap-2">
                                       <button
                                         onClick={() =>
@@ -1193,7 +1226,9 @@ export default function HomePage() {
                                 </td>
                                 <td className="px-6 py-5">
                                   <span className="font-mono-dm text-[11px] text-white/30">
-                                    Convidado
+                                    {invite.status === "accepted"
+                                      ? "Membro da equipe"
+                                      : "Convidado"}
                                   </span>
                                 </td>
                                 <td className="px-6 py-5">
@@ -1207,14 +1242,26 @@ export default function HomePage() {
                                   </span>
                                 </td>
                                 <td className="px-6 py-5 text-right">
-                                  {invite.status === "pending" && (
+                                  {["pending", "accepted", "declined"].includes(
+                                    invite.status,
+                                  ) && (
                                     <button
                                       onClick={() =>
-                                        handleCancelInvite(invite._id)
+                                        handleCancelInvite(
+                                          invite._id,
+                                          invite.status,
+                                          invite.email,
+                                        )
                                       }
                                       disabled={cancelingInviteId === invite._id}
                                       className="rounded-lg p-2 text-white/15 transition-colors hover:bg-red-400/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
-                                      title="Cancelar convite"
+                                      title={
+                                        invite.status === "accepted"
+                                          ? "Remover membro"
+                                          : invite.status === "declined"
+                                            ? "Remover registro"
+                                            : "Cancelar convite"
+                                      }
                                     >
                                       {cancelingInviteId === invite._id ? (
                                         <Loader2
