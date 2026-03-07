@@ -16,6 +16,8 @@ import {
   GripVertical,
   FolderKanban,
   Calendar,
+  Check,
+  X,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -34,6 +36,13 @@ export default function HomePage() {
     email: string;
     status: TeamInviteStatus;
     createdAt: string;
+  };
+  type ReceivedTeamInviteItem = TeamInviteItem & {
+    invitedBy?: {
+      _id: string;
+      fullName?: string;
+      email?: string;
+    } | null;
   };
 
   const kanbanColumns: Array<{
@@ -188,8 +197,19 @@ export default function HomePage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([]);
+  const [receivedTeamInvites, setReceivedTeamInvites] = useState<
+    ReceivedTeamInviteItem[]
+  >([]);
   const [isLoadingTeamInvites, setIsLoadingTeamInvites] = useState(false);
+  const [isLoadingReceivedTeamInvites, setIsLoadingReceivedTeamInvites] =
+    useState(false);
   const [isInvitingMember, setIsInvitingMember] = useState(false);
+  const [cancelingInviteId, setCancelingInviteId] = useState<string | null>(
+    null,
+  );
+  const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
+    null,
+  );
 
   const activeProject: any = projects.find(
     (p: any) => p._id === activeProjectId,
@@ -248,17 +268,37 @@ export default function HomePage() {
     const loadTeamInvites = async () => {
       try {
         setIsLoadingTeamInvites(true);
-        const res = await fetch(apiUrl("/api/team/invites"), {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const invites: TeamInviteItem[] = await res.json();
+        setIsLoadingReceivedTeamInvites(true);
+
+        const [sentRes, receivedRes] = await Promise.all([
+          fetch(apiUrl("/api/team/invites"), {
+            credentials: "include",
+          }),
+          fetch(apiUrl("/api/team/invites/received"), {
+            credentials: "include",
+          }),
+        ]);
+
+        if (sentRes.ok) {
+          const invites: TeamInviteItem[] = await sentRes.json();
           setTeamInvites(invites);
+        } else {
+          setTeamInvites([]);
+        }
+
+        if (receivedRes.ok) {
+          const invites: ReceivedTeamInviteItem[] = await receivedRes.json();
+          setReceivedTeamInvites(invites);
+        } else {
+          setReceivedTeamInvites([]);
         }
       } catch (err) {
         console.error(err);
+        setTeamInvites([]);
+        setReceivedTeamInvites([]);
       } finally {
         setIsLoadingTeamInvites(false);
+        setIsLoadingReceivedTeamInvites(false);
       }
     };
 
@@ -327,6 +367,14 @@ export default function HomePage() {
       return;
     }
 
+    const alreadyPending = teamInvites.some(
+      (invite) => invite.email === email && invite.status === "pending",
+    );
+    if (alreadyPending) {
+      window.alert("Já existe um convite pendente para este e-mail.");
+      return;
+    }
+
     setIsInvitingMember(true);
     try {
       const res = await fetch(apiUrl("/api/team/invites"), {
@@ -346,7 +394,11 @@ export default function HomePage() {
       }
 
       if (payload?._id) {
-        setTeamInvites((prev) => [payload, ...prev]);
+        setTeamInvites((prev) => {
+          const exists = prev.some((invite) => invite._id === payload._id);
+          if (exists) return prev;
+          return [payload, ...prev];
+        });
       }
 
       window.alert("Convite enviado com sucesso.");
@@ -355,6 +407,77 @@ export default function HomePage() {
       window.alert("Erro ao enviar convite. Tente novamente.");
     } finally {
       setIsInvitingMember(false);
+    }
+  };
+
+  const handleCancelInvite = async (inviteId: string) => {
+    if (!window.confirm("Cancelar este convite pendente?")) return;
+
+    setCancelingInviteId(inviteId);
+    try {
+      const res = await fetch(apiUrl(`/api/team/invites/${inviteId}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const payload = (await res.json().catch(() => null)) as
+        | { message?: string }
+        | null;
+
+      if (!res.ok) {
+        window.alert(payload?.message || "Não foi possível cancelar o convite.");
+        return;
+      }
+
+      setTeamInvites((prev) => prev.filter((invite) => invite._id !== inviteId));
+      window.alert("Convite cancelado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao cancelar convite:", error);
+      window.alert("Erro ao cancelar convite. Tente novamente.");
+    } finally {
+      setCancelingInviteId(null);
+    }
+  };
+
+  const handleRespondToInvite = async (
+    inviteId: string,
+    status: "accepted" | "declined",
+  ) => {
+    setRespondingInviteId(inviteId);
+    try {
+      const res = await fetch(apiUrl(`/api/team/invites/${inviteId}/status`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+        credentials: "include",
+      });
+
+      const payload = (await res
+        .json()
+        .catch(() => null)) as (ReceivedTeamInviteItem & { message?: string }) | null;
+
+      if (!res.ok) {
+        window.alert(payload?.message || "Não foi possível responder o convite.");
+        return;
+      }
+
+      setReceivedTeamInvites((prev) =>
+        prev.map((invite) =>
+          invite._id === inviteId
+            ? { ...invite, status: payload?.status || status }
+            : invite,
+        ),
+      );
+
+      window.alert(
+        status === "accepted"
+          ? "Convite aceito com sucesso."
+          : "Convite recusado com sucesso.",
+      );
+    } catch (error) {
+      console.error("Erro ao responder convite:", error);
+      window.alert("Erro ao responder convite. Tente novamente.");
+    } finally {
+      setRespondingInviteId(null);
     }
   };
 
@@ -904,7 +1027,8 @@ export default function HomePage() {
                           </td>
                         </tr>
 
-                        {isLoadingTeamInvites && (
+                        {(isLoadingTeamInvites ||
+                          isLoadingReceivedTeamInvites) && (
                           <tr>
                             <td colSpan={4} className="px-6 py-6 text-center">
                               <span className="font-mono-dm inline-flex items-center gap-2 text-[11px] text-white/30">
@@ -914,6 +1038,131 @@ export default function HomePage() {
                             </td>
                           </tr>
                         )}
+
+                        {!isLoadingReceivedTeamInvites &&
+                          receivedTeamInvites.length > 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-6 py-3">
+                                <span className="font-mono-dm text-[10px] uppercase tracking-[0.15em] text-white/25">
+                                  Convites recebidos
+                                </span>
+                              </td>
+                            </tr>
+                          )}
+
+                        {!isLoadingReceivedTeamInvites &&
+                          receivedTeamInvites.map((invite) => {
+                            const statusMeta =
+                              inviteStatusMap[invite.status] ||
+                              inviteStatusMap.pending;
+                            const inviterName =
+                              invite.invitedBy?.fullName || "Usuário";
+                            const inviterEmail =
+                              invite.invitedBy?.email || "sem e-mail";
+
+                            return (
+                              <tr
+                                key={`received-${invite._id}`}
+                                className="transition-colors hover:bg-white/[0.02]"
+                              >
+                                <td className="px-6 py-5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-sm font-bold text-white/80">
+                                      {inviterName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-bold text-white/70">
+                                        {inviterName}
+                                      </div>
+                                      <div className="font-mono-dm text-[10px] text-white/25">
+                                        {inviterEmail}
+                                      </div>
+                                      <div className="font-mono-dm text-[10px] text-white/20">
+                                        Convite recebido em{" "}
+                                        {formatDate(invite.createdAt)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <span className="font-mono-dm text-[11px] text-white/30">
+                                    Convidou você
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <span
+                                    className={`font-mono-dm inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider ${statusMeta.accent}`}
+                                  >
+                                    <span
+                                      className={`h-1 w-1 rounded-full ${statusMeta.dot}`}
+                                    />
+                                    {statusMeta.label}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5 text-right">
+                                  {invite.status === "pending" && (
+                                    <div className="inline-flex items-center gap-2">
+                                      <button
+                                        onClick={() =>
+                                          handleRespondToInvite(
+                                            invite._id,
+                                            "accepted",
+                                          )
+                                        }
+                                        disabled={
+                                          respondingInviteId === invite._id
+                                        }
+                                        className="rounded-lg p-2 text-emerald-400/70 transition-colors hover:bg-emerald-400/10 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                                        title="Aceitar convite"
+                                      >
+                                        {respondingInviteId === invite._id ? (
+                                          <Loader2
+                                            size={13}
+                                            className="animate-spin"
+                                          />
+                                        ) : (
+                                          <Check size={13} />
+                                        )}
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleRespondToInvite(
+                                            invite._id,
+                                            "declined",
+                                          )
+                                        }
+                                        disabled={
+                                          respondingInviteId === invite._id
+                                        }
+                                        className="rounded-lg p-2 text-red-400/70 transition-colors hover:bg-red-400/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                                        title="Recusar convite"
+                                      >
+                                        {respondingInviteId === invite._id ? (
+                                          <Loader2
+                                            size={13}
+                                            className="animate-spin"
+                                          />
+                                        ) : (
+                                          <X size={13} />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                        {!isLoadingTeamInvites &&
+                          teamInvites.length > 0 && (
+                            <tr>
+                              <td colSpan={4} className="px-6 py-3">
+                                <span className="font-mono-dm text-[10px] uppercase tracking-[0.15em] text-white/25">
+                                  Convites enviados
+                                </span>
+                              </td>
+                            </tr>
+                          )}
 
                         {!isLoadingTeamInvites &&
                           teamInvites.map((invite) => {
@@ -957,7 +1206,27 @@ export default function HomePage() {
                                     {statusMeta.label}
                                   </span>
                                 </td>
-                                <td className="px-6 py-5 text-right" />
+                                <td className="px-6 py-5 text-right">
+                                  {invite.status === "pending" && (
+                                    <button
+                                      onClick={() =>
+                                        handleCancelInvite(invite._id)
+                                      }
+                                      disabled={cancelingInviteId === invite._id}
+                                      className="rounded-lg p-2 text-white/15 transition-colors hover:bg-red-400/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                                      title="Cancelar convite"
+                                    >
+                                      {cancelingInviteId === invite._id ? (
+                                        <Loader2
+                                          size={14}
+                                          className="animate-spin"
+                                        />
+                                      ) : (
+                                        <Trash2 size={14} />
+                                      )}
+                                    </button>
+                                  )}
+                                </td>
                               </tr>
                             );
                           })}
