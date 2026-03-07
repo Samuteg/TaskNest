@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
+import teamRoutes from "./routes/team.route.js";
 import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 
@@ -34,6 +35,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/team", teamRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({ status: "ok", service: "TaskNest API" });
