@@ -28,6 +28,13 @@ export default function HomePage() {
     order?: number;
   };
   type TaskStatus = TaskItem["status"];
+  type TeamInviteStatus = "pending" | "accepted" | "declined";
+  type TeamInviteItem = {
+    _id: string;
+    email: string;
+    status: TeamInviteStatus;
+    createdAt: string;
+  };
 
   const kanbanColumns: Array<{
     status: TaskStatus;
@@ -70,6 +77,28 @@ export default function HomePage() {
     "bg-purple-600",
     "bg-rose-500",
   ];
+  const inviteStatusMap: Record<
+    TeamInviteStatus,
+    { label: string; accent: string; dot: string }
+  > = {
+    pending: {
+      label: "Pendente",
+      accent:
+        "border-amber-400/20 bg-amber-400/5 text-amber-400",
+      dot: "bg-amber-400",
+    },
+    accepted: {
+      label: "Aceito",
+      accent:
+        "border-emerald-400/20 bg-emerald-400/5 text-emerald-400",
+      dot: "bg-emerald-400",
+    },
+    declined: {
+      label: "Recusado",
+      accent: "border-red-400/20 bg-red-400/5 text-red-400",
+      dot: "bg-red-400",
+    },
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "25/01/2026";
@@ -158,6 +187,9 @@ export default function HomePage() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([]);
+  const [isLoadingTeamInvites, setIsLoadingTeamInvites] = useState(false);
+  const [isInvitingMember, setIsInvitingMember] = useState(false);
 
   const activeProject: any = projects.find(
     (p: any) => p._id === activeProjectId,
@@ -210,6 +242,29 @@ export default function HomePage() {
     if (activeProjectId) fetchTasks(activeProjectId);
   }, [activeProjectId]);
 
+  useEffect(() => {
+    if (currentView !== "team") return;
+
+    const loadTeamInvites = async () => {
+      try {
+        setIsLoadingTeamInvites(true);
+        const res = await fetch(apiUrl("/api/team/invites"), {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const invites: TeamInviteItem[] = await res.json();
+          setTeamInvites(invites);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoadingTeamInvites(false);
+      }
+    };
+
+    loadTeamInvites();
+  }, [currentView]);
+
   const handleCreateProject = async () => {
     const name = window.prompt("Nome do novo projeto:");
     if (!name) return;
@@ -257,6 +312,50 @@ export default function HomePage() {
       credentials: "include",
     });
     router.push("/login");
+  };
+
+  const handleInviteMember = async () => {
+    const rawEmail = window.prompt("Digite o e-mail do membro:");
+    if (rawEmail === null) return;
+
+    const email = rawEmail.trim().toLowerCase();
+    if (!email) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      window.alert("Informe um e-mail válido.");
+      return;
+    }
+
+    setIsInvitingMember(true);
+    try {
+      const res = await fetch(apiUrl("/api/team/invites"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
+
+      const payload = (await res
+        .json()
+        .catch(() => null)) as (TeamInviteItem & { message?: string }) | null;
+
+      if (!res.ok) {
+        window.alert(payload?.message || "Não foi possível enviar o convite.");
+        return;
+      }
+
+      if (payload?._id) {
+        setTeamInvites((prev) => [payload, ...prev]);
+      }
+
+      window.alert("Convite enviado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao convidar membro:", error);
+      window.alert("Erro ao enviar convite. Tente novamente.");
+    } finally {
+      setIsInvitingMember(false);
+    }
   };
 
   const openProject = (projectId: string) => {
@@ -805,13 +904,82 @@ export default function HomePage() {
                           </td>
                         </tr>
 
+                        {isLoadingTeamInvites && (
+                          <tr>
+                            <td colSpan={4} className="px-6 py-6 text-center">
+                              <span className="font-mono-dm inline-flex items-center gap-2 text-[11px] text-white/30">
+                                <Loader2 size={12} className="animate-spin" />
+                                Carregando convites...
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+
+                        {!isLoadingTeamInvites &&
+                          teamInvites.map((invite) => {
+                            const statusMeta =
+                              inviteStatusMap[invite.status] ||
+                              inviteStatusMap.pending;
+
+                            return (
+                              <tr
+                                key={invite._id}
+                                className="transition-colors hover:bg-white/[0.02]"
+                              >
+                                <td className="px-6 py-5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] text-sm font-bold text-white/80">
+                                      {invite.email.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-bold text-white/70">
+                                        {invite.email}
+                                      </div>
+                                      <div className="font-mono-dm text-[10px] text-white/25">
+                                        Convite enviado em{" "}
+                                        {formatDate(invite.createdAt)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <span className="font-mono-dm text-[11px] text-white/30">
+                                    Convidado
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5">
+                                  <span
+                                    className={`font-mono-dm inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-wider ${statusMeta.accent}`}
+                                  >
+                                    <span
+                                      className={`h-1 w-1 rounded-full ${statusMeta.dot}`}
+                                    />
+                                    {statusMeta.label}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-5 text-right" />
+                              </tr>
+                            );
+                          })}
+
                         <tr>
                           <td colSpan={4} className="px-6 py-12 text-center">
                             <p className="font-mono-dm mb-5 text-xs text-white/20">
                               Deseja colaborar com outros usuários?
                             </p>
-                            <button className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-2.5 text-sm font-bold text-white">
-                              <Plus size={14} /> Convidar membro
+                            <button
+                              onClick={handleInviteMember}
+                              disabled={isInvitingMember}
+                              className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {isInvitingMember ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <Plus size={14} />
+                              )}
+                              {isInvitingMember
+                                ? "Enviando..."
+                                : "Convidar membro"}
                             </button>
                           </td>
                         </tr>
