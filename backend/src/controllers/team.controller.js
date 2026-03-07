@@ -1,4 +1,5 @@
 import TeamInvite from "../models/teamInvite.model.js";
+import mongoose from "mongoose";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,6 +13,25 @@ export const listTeamInvites = async (req, res) => {
   } catch (error) {
     console.error("Erro em listTeamInvites:", error.message);
     res.status(500).json({ message: "Erro interno ao listar convites." });
+  }
+};
+
+export const listReceivedTeamInvites = async (req, res) => {
+  try {
+    const normalizedEmail = String(req.user?.email || "")
+      .trim()
+      .toLowerCase();
+
+    const invites = await TeamInvite.find({ email: normalizedEmail })
+      .populate("invitedBy", "fullName email")
+      .sort({
+        createdAt: -1,
+      });
+
+    res.status(200).json(invites);
+  } catch (error) {
+    console.error("Erro em listReceivedTeamInvites:", error.message);
+    res.status(500).json({ message: "Erro interno ao listar convites recebidos." });
   }
 };
 
@@ -36,9 +56,7 @@ export const createTeamInvite = async (req, res) => {
     });
 
     if (existingInvite) {
-      return res.status(409).json({
-        message: "Já existe um convite pendente para este e-mail.",
-      });
+      return res.status(200).json(existingInvite);
     }
 
     const invite = await TeamInvite.create({
@@ -50,5 +68,83 @@ export const createTeamInvite = async (req, res) => {
   } catch (error) {
     console.error("Erro em createTeamInvite:", error.message);
     res.status(500).json({ message: "Erro interno ao criar convite." });
+  }
+};
+
+export const cancelTeamInvite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "ID de convite inválido." });
+    }
+
+    const invite = await TeamInvite.findOne({
+      _id: id,
+      invitedBy: req.user._id,
+    });
+
+    if (!invite) {
+      return res.status(404).json({ message: "Convite não encontrado." });
+    }
+
+    if (invite.status !== "pending") {
+      return res.status(400).json({
+        message: "Só é possível cancelar convites pendentes.",
+      });
+    }
+
+    await invite.deleteOne();
+
+    res.status(200).json({ message: "Convite cancelado com sucesso." });
+  } catch (error) {
+    console.error("Erro em cancelTeamInvite:", error.message);
+    res.status(500).json({ message: "Erro interno ao cancelar convite." });
+  }
+};
+
+export const respondToTeamInvite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const normalizedEmail = String(req.user?.email || "")
+      .trim()
+      .toLowerCase();
+    const { status } = req.body || {};
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "ID de convite inválido." });
+    }
+
+    if (!["accepted", "declined"].includes(status)) {
+      return res.status(400).json({
+        message: "Status inválido. Use 'accepted' ou 'declined'.",
+      });
+    }
+
+    const invite = await TeamInvite.findOne({
+      _id: id,
+      email: normalizedEmail,
+    }).populate("invitedBy", "fullName email");
+
+    if (!invite) {
+      return res.status(404).json({ message: "Convite não encontrado." });
+    }
+
+    if (invite.status === status) {
+      return res.status(200).json(invite);
+    }
+
+    if (invite.status !== "pending") {
+      return res.status(400).json({
+        message: "Este convite já foi respondido e não pode ser alterado.",
+      });
+    }
+
+    invite.status = status;
+    await invite.save();
+
+    res.status(200).json(invite);
+  } catch (error) {
+    console.error("Erro em respondToTeamInvite:", error.message);
+    res.status(500).json({ message: "Erro interno ao responder convite." });
   }
 };
