@@ -13,12 +13,14 @@ export default function LoginPage() {
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [forgotFormData, setForgotFormData] = useState({
     email: "",
+    token: "",
     newPassword: "",
     confirmPassword: "",
   });
   const [forgotError, setForgotError] = useState("");
   const [forgotSuccess, setForgotSuccess] = useState("");
   const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [isForgotTokenLoading, setIsForgotTokenLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +50,12 @@ export default function LoginPage() {
   const openForgotPasswordModal = () => {
     setForgotError("");
     setForgotSuccess("");
-    setForgotFormData({ email: formData.email, newPassword: "", confirmPassword: "" });
+    setForgotFormData({
+      email: formData.email,
+      token: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
     setIsForgotModalOpen(true);
   };
 
@@ -56,13 +63,62 @@ export default function LoginPage() {
     setIsForgotModalOpen(false);
     setForgotError("");
     setForgotSuccess("");
-    setForgotFormData({ email: "", newPassword: "", confirmPassword: "" });
+    setForgotFormData({
+      email: "",
+      token: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+  };
+
+  const handleForgotPasswordRequest = async () => {
+    setForgotError("");
+    setForgotSuccess("");
+
+    if (!forgotFormData.email) {
+      setForgotError("Informe o e-mail para enviar o token.");
+      return;
+    }
+
+    setIsForgotTokenLoading(true);
+    try {
+      const response = await fetch(apiUrl("/api/auth/forgot-password"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotFormData.email }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setForgotError(data.message || "Não foi possível enviar o token.");
+        return;
+      }
+
+      setForgotSuccess(
+        data.message || "Se o e-mail existir, enviamos o token de recuperação.",
+      );
+
+      if (typeof data.devResetToken === "string" && data.devResetToken) {
+        setForgotFormData((prev) => ({ ...prev, token: data.devResetToken }));
+        setForgotSuccess(
+          "Token gerado. Em ambiente local ele foi preenchido automaticamente.",
+        );
+      }
+    } catch {
+      setForgotError("Erro de conexão com o servidor.");
+    } finally {
+      setIsForgotTokenLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotError("");
     setForgotSuccess("");
+    if (!forgotFormData.email || !forgotFormData.token) {
+      setForgotError("Informe e-mail e token de recuperação.");
+      return;
+    }
     if (forgotFormData.newPassword !== forgotFormData.confirmPassword) {
       setForgotError("As senhas não coincidem.");
       return;
@@ -73,18 +129,24 @@ export default function LoginPage() {
     }
     setIsForgotLoading(true);
     try {
-      const response = await fetch(apiUrl("/api/auth/forgot-password"), {
+      const response = await fetch(apiUrl("/api/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: forgotFormData.email,
+          token: forgotFormData.token,
           newPassword: forgotFormData.newPassword,
         }),
       });
       const data = await response.json();
       if (response.ok) {
         setForgotSuccess(data.message || "Solicitação enviada com sucesso.");
-        setForgotFormData((prev) => ({ ...prev, newPassword: "", confirmPassword: "" }));
+        setForgotFormData((prev) => ({
+          ...prev,
+          token: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
       } else {
         setForgotError(data.message || "Não foi possível redefinir a senha.");
       }
@@ -348,7 +410,7 @@ export default function LoginPage() {
                   </div>
                   <h2 className="text-xl font-extrabold tracking-tight text-white">Redefinir senha</h2>
                   <p className="mt-1 text-sm text-white/30">
-                    Informe seu e-mail e escolha uma nova senha.
+                    Envie o token por e-mail e depois redefina com token + nova senha.
                   </p>
                 </div>
 
@@ -369,13 +431,42 @@ export default function LoginPage() {
                     <label htmlFor="forgot-email" className="font-mono-dm mb-2 block text-[10px] uppercase tracking-[0.15em] text-white/30">
                       E-mail
                     </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        required
+                        placeholder="seu@email.com"
+                        value={forgotFormData.email}
+                        onChange={(e) =>
+                          setForgotFormData({ ...forgotFormData, email: e.target.value })
+                        }
+                        className={modalInputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleForgotPasswordRequest}
+                        disabled={isForgotTokenLoading}
+                        className="btn-fuchsia-glow shrink-0 rounded-xl border border-fuchsia-400/25 px-3 py-2.5 text-xs font-bold text-fuchsia-300 transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                      >
+                        {isForgotTokenLoading ? "Enviando..." : "Enviar token"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="reset-token" className="font-mono-dm mb-2 block text-[10px] uppercase tracking-[0.15em] text-white/30">
+                      Token de recuperação
+                    </label>
                     <input
-                      id="forgot-email"
-                      type="email"
+                      id="reset-token"
+                      type="text"
                       required
-                      placeholder="seu@email.com"
-                      value={forgotFormData.email}
-                      onChange={(e) => setForgotFormData({ ...forgotFormData, email: e.target.value })}
+                      placeholder="Cole o token recebido por e-mail"
+                      value={forgotFormData.token}
+                      onChange={(e) =>
+                        setForgotFormData({ ...forgotFormData, token: e.target.value })
+                      }
                       className={modalInputClass}
                     />
                   </div>
@@ -422,7 +513,7 @@ export default function LoginPage() {
                     </button>
                     <button
                       type="submit"
-                      disabled={isForgotLoading}
+                      disabled={isForgotLoading || isForgotTokenLoading}
                       className="btn-fuchsia-glow inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-2.5 text-sm font-bold text-white transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
                     >
                       {isForgotLoading && <Loader2 size={14} className="animate-spin" />}

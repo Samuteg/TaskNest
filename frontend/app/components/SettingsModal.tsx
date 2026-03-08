@@ -38,6 +38,10 @@ const SettingsModal = ({
   const [localProfilePreview, setLocalProfilePreview] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -47,6 +51,9 @@ const SettingsModal = ({
       setProfilePic(user.profilePic || "");
       setSelectedProfileFile(null);
       setLocalProfilePreview("");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [user, isOpen]);
@@ -140,6 +147,59 @@ const SettingsModal = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage({ text: "", type: "" });
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setMessage({
+        text: "Preencha senha atual, nova senha e confirmação.",
+        type: "error",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ text: "As novas senhas não coincidem.", type: "error" });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setMessage({
+        text: "A nova senha deve ter pelo menos 6 caracteres.",
+        type: "error",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const response = await fetch(apiUrl("/api/auth/change-password"), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        setMessage({
+          text: await extractMessage(response, "Não foi possível alterar a senha."),
+          type: "error",
+        });
+        return;
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setMessage({ text: "Senha alterada com sucesso!", type: "success" });
+    } catch {
+      setMessage({ text: "Erro de conexão com o servidor.", type: "error" });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -378,15 +438,29 @@ const SettingsModal = ({
 
               {/* ── TAB: SECURITY ── */}
               {activeTab === "security" && (
-                <div className="space-y-5">
+                <form onSubmit={handleChangePassword} className="space-y-5">
+                  <div>
+                    <label className="font-mono-dm mb-2 block text-[10px] uppercase tracking-[0.15em] text-white/30">
+                      Senha atual
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Digite sua senha atual"
+                      className={inputClass}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                  </div>
                   <div>
                     <label className="font-mono-dm mb-2 block text-[10px] uppercase tracking-[0.15em] text-white/30">
                       Nova senha
                     </label>
                     <input
                       type="password"
-                      placeholder="Mínimo 8 caracteres"
+                      placeholder="Mínimo 6 caracteres"
                       className={inputClass}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                     />
                   </div>
                   <div>
@@ -397,12 +471,25 @@ const SettingsModal = ({
                       type="password"
                       placeholder="Repita a nova senha"
                       className={inputClass}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
                     />
                   </div>
-                  <button className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4a044e] py-3 text-sm font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(74,4,78,0.4)]">
-                    Atualizar senha
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4a044e] py-3 text-sm font-bold text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(74,4,78,0.4)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        Atualizando senha...
+                      </>
+                    ) : (
+                      "Atualizar senha"
+                    )}
                   </button>
-                </div>
+                </form>
               )}
 
               {/* ── TAB: PREFS ── */}
