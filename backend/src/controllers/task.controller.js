@@ -1,6 +1,6 @@
 import Task from "../models/Task.js";
 import mongoose from "mongoose";
-import { canUserAccessProject } from "../lib/teamAccess.js";
+import { canUserAccessProjectWithRole } from "../lib/teamAccess.js";
 
 const allowedStatuses = new Set(["todo", "in-progress", "done"]);
 const allowedPriorities = new Set(["low", "medium", "high"]);
@@ -63,7 +63,11 @@ export const getTasks = async (req, res) => {
       return res.status(400).json({ message: "Projeto inválido." });
     }
 
-    const { allowed, project } = await canUserAccessProject(req.user, projectId);
+    const { allowed, project } = await canUserAccessProjectWithRole(
+      req.user,
+      projectId,
+      "viewer",
+    );
     if (!project) {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
@@ -106,9 +110,10 @@ export const createTask = async (req, res) => {
       return res.status(400).json({ message: "Projeto inválido." });
     }
 
-    const { allowed, project: existingProject } = await canUserAccessProject(
+    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
       req.user,
       project,
+      "editor",
     );
     if (!existingProject) {
       return res.status(404).json({ message: "Projeto não encontrado." });
@@ -178,7 +183,11 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Tarefa não encontrada." });
     }
 
-    const { allowed } = await canUserAccessProject(req.user, task.project);
+    const { allowed } = await canUserAccessProjectWithRole(
+      req.user,
+      task.project,
+      "editor",
+    );
     if (!allowed) {
       return res.status(403).json({ message: "Sem permissão para este projeto." });
     }
@@ -281,7 +290,11 @@ export const deleteTask = async (req, res) => {
       return res.status(404).json({ message: "Tarefa não encontrada." });
     }
 
-    const { allowed } = await canUserAccessProject(req.user, task.project);
+    const { allowed } = await canUserAccessProjectWithRole(
+      req.user,
+      task.project,
+      "editor",
+    );
     if (!allowed) {
       return res.status(403).json({ message: "Sem permissão para este projeto." });
     }

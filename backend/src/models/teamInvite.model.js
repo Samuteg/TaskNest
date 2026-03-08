@@ -13,6 +13,16 @@ const teamInviteSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Project",
+      default: null,
+    },
+    role: {
+      type: String,
+      enum: ["viewer", "editor", "admin"],
+      default: "viewer",
+    },
     status: {
       type: String,
       enum: ["pending", "accepted", "declined"],
@@ -21,6 +31,9 @@ const teamInviteSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+
+teamInviteSchema.index({ email: 1, project: 1, updatedAt: -1, createdAt: -1 });
+teamInviteSchema.index({ invitedBy: 1, createdAt: -1 });
 
 const TeamInvite = mongoose.model("TeamInvite", teamInviteSchema);
 

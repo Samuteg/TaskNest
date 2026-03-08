@@ -13,13 +13,34 @@ const priorityOptions = [
   { value: "high", label: "Alta", dot: "bg-red-400" },
 ];
 
+type TaskStatus = "todo" | "in-progress" | "done";
+type TaskPriority = "low" | "medium" | "high";
+type TaskChecklistItem = { text?: string; done?: boolean };
+type TaskToEdit = {
+  _id: string;
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: string | Date | null;
+  assignee?: string;
+  checklist?: TaskChecklistItem[];
+};
+type TaskModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  projectId: string | null;
+  taskToEdit: TaskToEdit | null;
+};
+
 const TaskModal = ({
   isOpen,
   onClose,
   onSuccess,
   projectId,
   taskToEdit,
-}: any) => {
+}: TaskModalProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("todo");
@@ -55,7 +76,10 @@ const TaskModal = ({
                 text: typeof item?.text === "string" ? item.text : "",
                 done: Boolean(item?.done),
               }))
-              .filter((item) => item.text.trim().length > 0)
+              .filter(
+                (item: { text: string; done: boolean }) =>
+                  item.text.trim().length > 0,
+              )
           : [],
       );
     } else {

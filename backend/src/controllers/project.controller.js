@@ -1,6 +1,12 @@
 import Project from "../models/project.model.js";
 import Task from "../models/Task.js"; // Precisamos importar o Task para apagar as tarefas associadas
-import { getAccessibleOwnerIds } from "../lib/teamAccess.js";
+import TeamInvite from "../models/teamInvite.model.js";
+import mongoose from "mongoose";
+import {
+  canUserAccessProjectWithRole,
+  getAccessibleProjectIds,
+  getProjectAccessMapForUser,
+} from "../lib/teamAccess.js";
 
 // 1. CRIAR UM PROJETO
 export const createProject = async (req, res) => {
@@ -28,13 +34,33 @@ export const createProject = async (req, res) => {
 // 2. LISTAR TODOS OS PROJETOS DO USUÁRIO
 export const getProjects = async (req, res) => {
   try {
-    // Lista projetos próprios + projetos de usuários que convidaram este usuário e tiveram convite aceito
-    const accessibleOwnerIds = await getAccessibleOwnerIds(req.user);
+    const [accessibleProjectIds, accessByProjectId] = await Promise.all([
+      getAccessibleProjectIds(req.user),
+      getProjectAccessMapForUser(req.user),
+    ]);
+
+    if (!accessibleProjectIds.length) {
+      return res.status(200).json([]);
+    }
+
     const projects = await Project.find({
-      user: { $in: accessibleOwnerIds },
+      _id: { $in: accessibleProjectIds },
     }).sort({ createdAt: -1 });
 
-    res.status(200).json(projects);
+    const projectsWithAccess = projects.map((project) => {
+      const access = accessByProjectId.get(project._id.toString()) || {
+        role: "viewer",
+        isOwner: false,
+      };
+
+      return {
+        ...project.toObject(),
+        accessRole: access.role,
+        isOwner: access.isOwner,
+      };
+    });
+
+    res.status(200).json(projectsWithAccess);
   } catch (error) {
     console.error("Erro em getProjects:", error.message);
     res.status(500).json({ message: "Erro interno ao buscar projetos." });
@@ -45,17 +71,38 @@ export const getProjects = async (req, res) => {
 export const updateProject = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const normalizedName = String(req.body?.name || "").trim();
 
-    // Procura o projeto pelo ID e garante que ele pertence ao usuário logado
-    const project = await Project.findOneAndUpdate(
-      { _id: id, user: req.user._id },
-      { name },
-      { new: true } // Retorna o documento atualizado
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Projeto inválido." });
+    }
+
+    if (!normalizedName) {
+      return res.status(400).json({ message: "O nome do projeto é obrigatório." });
+    }
+
+    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
+      req.user,
+      id,
+      "admin",
+    );
+
+    if (!existingProject) {
+      return res.status(404).json({ message: "Projeto não encontrado." });
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ message: "Sem permissão para este projeto." });
+    }
+
+    const project = await Project.findByIdAndUpdate(
+      id,
+      { name: normalizedName },
+      { new: true },
     );
 
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado ou não autorizado." });
+      return res.status(404).json({ message: "Projeto não encontrado." });
     }
 
     res.status(200).json(project);
@@ -69,16 +116,36 @@ export const updateProject = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Projeto inválido." });
+    }
 
-    // 1º passo: Tenta apagar o projeto (garantindo que é o dono)
-    const project = await Project.findOneAndDelete({ _id: id, user: req.user._id });
+    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
+      req.user,
+      id,
+      "admin",
+    );
+
+    if (!existingProject) {
+      return res.status(404).json({ message: "Projeto não encontrado." });
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ message: "Sem permissão para este projeto." });
+    }
+
+    // 1º passo: apaga o projeto após validar permissão de admin no projeto
+    const project = await Project.findByIdAndDelete(id);
 
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado ou não autorizado." });
+      return res.status(404).json({ message: "Projeto não encontrado." });
     }
 
     // 2º passo: Apaga todas as tarefas que pertenciam a este projeto
-    await Task.deleteMany({ project: id });
+    await Promise.all([
+      Task.deleteMany({ project: id }),
+      TeamInvite.deleteMany({ project: id }),
+    ]);
 
     res.status(200).json({ message: "Projeto e tarefas associadas excluídos com sucesso." });
   } catch (error) {

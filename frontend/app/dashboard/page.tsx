@@ -41,11 +41,30 @@ export default function HomePage() {
   };
   type TaskStatus = TaskItem["status"];
   type TeamInviteStatus = "pending" | "accepted" | "declined";
+  type ProjectAccessRole = "viewer" | "editor" | "admin";
+  type ProjectItem = {
+    _id: string;
+    name: string;
+    createdAt: string;
+    accessRole?: ProjectAccessRole;
+    isOwner?: boolean;
+  };
+  type UserItem = {
+    _id?: string;
+    fullName: string;
+    email: string;
+  };
+  type InviteProject = {
+    _id: string;
+    name?: string;
+  };
   type TeamInviteItem = {
     _id: string;
     email: string;
     status: TeamInviteStatus;
     createdAt: string;
+    role?: ProjectAccessRole;
+    project?: InviteProject | string | null;
   };
   type ReceivedTeamInviteItem = TeamInviteItem & {
     invitedBy?: {
@@ -118,6 +137,11 @@ export default function HomePage() {
       dot: "bg-red-400",
     },
   };
+  const projectRoleLabel: Record<ProjectAccessRole, string> = {
+    viewer: "Viewer",
+    editor: "Editor",
+    admin: "Admin",
+  };
   const priorityMeta: Record<
     TaskPriority,
     { label: string; badgeClass: string }
@@ -154,6 +178,23 @@ export default function HomePage() {
 
   const getTasksByStatus = (taskList: TaskItem[], status: TaskStatus) =>
     sortTasksByDisplayOrder(taskList.filter((task) => task.status === status));
+
+  const normalizeProjectRole = (role: string | undefined): ProjectAccessRole => {
+    if (role === "admin" || role === "editor" || role === "viewer") return role;
+    return "viewer";
+  };
+
+  const getInviteProjectId = (invite: TeamInviteItem) => {
+    if (!invite.project) return "";
+    if (typeof invite.project === "string") return invite.project;
+    return invite.project._id;
+  };
+
+  const getInviteProjectName = (invite: TeamInviteItem) => {
+    if (!invite.project) return "Projeto";
+    if (typeof invite.project === "string") return "Projeto";
+    return invite.project.name || "Projeto";
+  };
 
   const moveTaskInBoard = (
     taskList: TaskItem[],
@@ -194,7 +235,7 @@ export default function HomePage() {
   };
 
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(true); // always dark to match system
 
@@ -210,7 +251,7 @@ export default function HomePage() {
     window.localStorage.setItem("tasknest-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [currentView, setCurrentView] = useState<"projects" | "tasks" | "team">(
     "projects",
@@ -225,7 +266,7 @@ export default function HomePage() {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [projectCreationError, setProjectCreationError] = useState("");
-  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([]);
   const [receivedTeamInvites, setReceivedTeamInvites] = useState<
     ReceivedTeamInviteItem[]
@@ -241,8 +282,11 @@ export default function HomePage() {
     null,
   );
 
-  const activeProject: any = projects.find(
-    (p: any) => p._id === activeProjectId,
+  const activeProject = projects.find((p) => p._id === activeProjectId);
+  const canEditActiveProjectTasks = Boolean(
+    activeProject?.isOwner ||
+      activeProject?.accessRole === "admin" ||
+      activeProject?.accessRole === "editor",
   );
 
   const fetchUserData = async () => {
@@ -262,7 +306,10 @@ export default function HomePage() {
       const res = await fetch(apiUrl("/api/projects"), {
         credentials: "include",
       });
-      if (res.ok) setProjects(await res.json());
+      if (res.ok) {
+        const payload = (await res.json()) as ProjectItem[];
+        setProjects(payload);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -420,6 +467,15 @@ export default function HomePage() {
   };
 
   const handleInviteMember = async () => {
+    const manageableProjects = projects.filter(
+      (project) => project.isOwner || project.accessRole === "admin",
+    );
+
+    if (!manageableProjects.length) {
+      window.alert("Você precisa ser admin de um projeto para enviar convites.");
+      return;
+    }
+
     const rawEmail = window.prompt("Digite o e-mail do membro:");
     if (rawEmail === null) return;
 
@@ -432,11 +488,59 @@ export default function HomePage() {
       return;
     }
 
+    const defaultProject =
+      manageableProjects.find((project) => project._id === activeProjectId) ||
+      manageableProjects[0];
+
+    let selectedProject = defaultProject;
+    if (manageableProjects.length > 1) {
+      const optionsText = manageableProjects
+        .map((project, index) => {
+          const marker = project._id === defaultProject._id ? " (padrão)" : "";
+          return `${index + 1}. ${project.name}${marker}`;
+        })
+        .join("\n");
+
+      const selectedProjectText = window.prompt(
+        `Escolha o projeto para o convite:\n${optionsText}\n\nDigite o número do projeto:`,
+        String(manageableProjects.findIndex((project) => project._id === defaultProject._id) + 1),
+      );
+
+      if (selectedProjectText === null) return;
+
+      const selectedIndex = Number.parseInt(selectedProjectText, 10) - 1;
+      if (
+        Number.isNaN(selectedIndex) ||
+        selectedIndex < 0 ||
+        selectedIndex >= manageableProjects.length
+      ) {
+        window.alert("Seleção de projeto inválida.");
+        return;
+      }
+
+      selectedProject = manageableProjects[selectedIndex];
+    }
+
+    const rawRole = window.prompt(
+      "Defina o papel do membro: viewer, editor ou admin.",
+      "viewer",
+    );
+    if (rawRole === null) return;
+
+    const normalizedRole = rawRole.trim().toLowerCase();
+    if (!["viewer", "editor", "admin"].includes(normalizedRole)) {
+      window.alert("Papel inválido. Use viewer, editor ou admin.");
+      return;
+    }
+
     const alreadyPending = teamInvites.some(
-      (invite) => invite.email === email && invite.status === "pending",
+      (invite) =>
+        invite.email === email &&
+        invite.status === "pending" &&
+        getInviteProjectId(invite) === selectedProject._id,
     );
     if (alreadyPending) {
-      window.alert("Já existe um convite pendente para este e-mail.");
+      window.alert("Já existe um convite pendente para este e-mail neste projeto.");
       return;
     }
 
@@ -445,7 +549,11 @@ export default function HomePage() {
       const res = await fetch(apiUrl("/api/team/invites"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          projectId: selectedProject._id,
+          role: normalizedRole,
+        }),
         credentials: "include",
       });
 
@@ -460,8 +568,13 @@ export default function HomePage() {
 
       if (payload?._id) {
         setTeamInvites((prev) => {
-          const exists = prev.some((invite) => invite._id === payload._id);
-          if (exists) return prev;
+          const existingIndex = prev.findIndex((invite) => invite._id === payload._id);
+          if (existingIndex >= 0) {
+            const nextInvites = [...prev];
+            nextInvites[existingIndex] = payload;
+            return nextInvites;
+          }
+
           return [payload, ...prev];
         });
       }
@@ -479,10 +592,11 @@ export default function HomePage() {
     inviteId: string,
     status: TeamInviteStatus,
     inviteEmail: string,
+    projectId: string,
   ) => {
     const confirmationMessage =
       status === "accepted"
-        ? "Remover este membro da equipe?"
+        ? "Remover este membro do projeto?"
         : status === "declined"
           ? "Remover este registro de convite?"
           : "Cancelar este convite pendente?";
@@ -505,13 +619,19 @@ export default function HomePage() {
 
       setTeamInvites((prev) =>
         status === "accepted"
-          ? prev.filter((invite) => invite.email !== inviteEmail)
+          ? prev.filter(
+              (invite) =>
+                !(
+                  invite.email === inviteEmail &&
+                  getInviteProjectId(invite) === projectId
+                ),
+            )
           : prev.filter((invite) => invite._id !== inviteId),
       );
       window.alert(
         payload?.message ||
           (status === "accepted"
-            ? "Membro removido da equipe com sucesso."
+            ? "Membro removido do projeto com sucesso."
             : "Convite removido com sucesso."),
       );
     } catch (error) {
@@ -775,8 +895,11 @@ export default function HomePage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {projects.map((proj: any, index: number) => {
+                      {projects.map((proj, index: number) => {
                         const accent = cardAccents[index % cardAccents.length];
+                        const canManageProject =
+                          proj.isOwner || proj.accessRole === "admin";
+                        const projectRole = normalizeProjectRole(proj.accessRole);
                         return (
                           <div
                             key={proj._id}
@@ -802,16 +925,21 @@ export default function HomePage() {
                                       <Calendar size={9} />
                                       {formatDate(proj.createdAt)}
                                     </div>
+                                    <div className="font-mono-dm mt-1 inline-flex items-center rounded-full border border-white/[0.1] bg-white/[0.03] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-white/30">
+                                      {projectRoleLabel[projectRole]}
+                                    </div>
                                   </div>
                                 </div>
-                                <button
-                                  onClick={(e) =>
-                                    handleDeleteProject(proj._id, e)
-                                  }
-                                  className="rounded-lg p-1.5 text-white/15 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {canManageProject && (
+                                  <button
+                                    onClick={(e) =>
+                                      handleDeleteProject(proj._id, e)
+                                    }
+                                    className="rounded-lg p-1.5 text-white/15 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
                               </div>
 
                               <p className="text-xs text-white/25 line-clamp-2 mb-5">
@@ -863,6 +991,11 @@ export default function HomePage() {
                       <p className={sectionSubtitle}>
                         Arraste tarefas entre colunas para atualizar o status.
                       </p>
+                      {!canEditActiveProjectTasks && (
+                        <p className="font-mono-dm mt-2 text-[10px] uppercase tracking-[0.12em] text-amber-400/70">
+                          Acesso somente leitura
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       {isReorderingTasks && (
@@ -871,15 +1004,17 @@ export default function HomePage() {
                           Salvando…
                         </span>
                       )}
-                      <button
-                        onClick={() => {
-                          setEditingTask(null);
-                          setIsTaskModalOpen(true);
-                        }}
-                        className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-3 text-sm font-bold text-white"
-                      >
-                        <Plus size={16} /> Nova Tarefa
-                      </button>
+                      {canEditActiveProjectTasks && (
+                        <button
+                          onClick={() => {
+                            setEditingTask(null);
+                            setIsTaskModalOpen(true);
+                          }}
+                          className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-3 text-sm font-bold text-white"
+                        >
+                          <Plus size={16} /> Nova Tarefa
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -897,9 +1032,13 @@ export default function HomePage() {
                         <div
                           key={column.status}
                           onDragOver={(e) =>
+                            canEditActiveProjectTasks &&
                             handleTaskDragOverColumn(e, column.status)
                           }
-                          onDrop={(e) => handleTaskDrop(e, column.status)}
+                          onDrop={(e) =>
+                            canEditActiveProjectTasks &&
+                            handleTaskDrop(e, column.status)
+                          }
                           className={`rounded-2xl border bg-[#131316] transition-all ${
                             isColDragOver
                               ? `border-[#4a044e]/50 ring-1 ring-[#4a044e]/20`
@@ -971,11 +1110,13 @@ export default function HomePage() {
                                 return (
                                   <article
                                     key={task._id}
-                                    draggable
+                                    draggable={canEditActiveProjectTasks}
                                     onDragStart={(e) =>
+                                      canEditActiveProjectTasks &&
                                       handleTaskDragStart(e, task._id)
                                     }
                                     onDragOver={(e) => {
+                                      if (!canEditActiveProjectTasks) return;
                                       e.stopPropagation();
                                       handleTaskDragOverTask(
                                         e,
@@ -984,6 +1125,7 @@ export default function HomePage() {
                                       );
                                     }}
                                     onDrop={(e) => {
+                                      if (!canEditActiveProjectTasks) return;
                                       e.stopPropagation();
                                       handleTaskDrop(
                                         e,
@@ -991,8 +1133,15 @@ export default function HomePage() {
                                         task._id,
                                       );
                                     }}
-                                    onDragEnd={handleTaskDragEnd}
-                                    className={`task-card group cursor-move rounded-xl border bg-[#0d0d0f] p-4 ${
+                                    onDragEnd={() =>
+                                      canEditActiveProjectTasks &&
+                                      handleTaskDragEnd()
+                                    }
+                                    className={`task-card group ${
+                                      canEditActiveProjectTasks
+                                        ? "cursor-move"
+                                        : "cursor-default"
+                                    } rounded-xl border bg-[#0d0d0f] p-4 ${
                                       isDragging
                                         ? "opacity-50 border-[#4a044e]/40"
                                         : isDragOver
@@ -1053,25 +1202,27 @@ export default function HomePage() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="mt-3 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                                      <button
-                                        onClick={() => {
-                                          setEditingTask(task);
-                                          setIsTaskModalOpen(true);
-                                        }}
-                                        className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-fuchsia-400/10 hover:text-fuchsia-400"
-                                      >
-                                        <Edit3 size={13} />
-                                      </button>
-                                      <button
-                                        onClick={() =>
-                                          handleDeleteTask(task._id)
-                                        }
-                                        className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-red-400/10 hover:text-red-400"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </div>
+                                    {canEditActiveProjectTasks && (
+                                      <div className="mt-3 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <button
+                                          onClick={() => {
+                                            setEditingTask(task);
+                                            setIsTaskModalOpen(true);
+                                          }}
+                                          className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-fuchsia-400/10 hover:text-fuchsia-400"
+                                        >
+                                          <Edit3 size={13} />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteTask(task._id)
+                                          }
+                                          className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </div>
+                                    )}
                                   </article>
                                 );
                               })
@@ -1094,15 +1245,17 @@ export default function HomePage() {
                       <p className="font-mono-dm text-xs uppercase tracking-widest text-white/20 mb-4">
                         Nenhuma tarefa neste projeto ainda
                       </p>
-                      <button
-                        onClick={() => {
-                          setEditingTask(null);
-                          setIsTaskModalOpen(true);
-                        }}
-                        className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-4 py-2.5 text-sm font-bold text-white"
-                      >
-                        <Plus size={14} /> Adicionar primeira tarefa
-                      </button>
+                      {canEditActiveProjectTasks && (
+                        <button
+                          onClick={() => {
+                            setEditingTask(null);
+                            setIsTaskModalOpen(true);
+                          }}
+                          className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-4 py-2.5 text-sm font-bold text-white"
+                        >
+                          <Plus size={14} /> Adicionar primeira tarefa
+                        </button>
+                      )}
                     </div>
                   )}
                 </>
@@ -1208,6 +1361,8 @@ export default function HomePage() {
                               invite.invitedBy?.fullName || "Usuário";
                             const inviterEmail =
                               invite.invitedBy?.email || "sem e-mail";
+                            const inviteRole = normalizeProjectRole(invite.role);
+                            const inviteProjectName = getInviteProjectName(invite);
 
                             return (
                               <tr
@@ -1235,7 +1390,7 @@ export default function HomePage() {
                                 </td>
                                 <td className="px-6 py-5">
                                   <span className="font-mono-dm text-[11px] text-white/30">
-                                    Convidou você
+                                    {projectRoleLabel[inviteRole]} em {inviteProjectName}
                                   </span>
                                 </td>
                                 <td className="px-6 py-5">
@@ -1318,6 +1473,8 @@ export default function HomePage() {
                             const statusMeta =
                               inviteStatusMap[invite.status] ||
                               inviteStatusMap.pending;
+                            const inviteRole = normalizeProjectRole(invite.role);
+                            const inviteProjectName = getInviteProjectName(invite);
 
                             return (
                               <tr
@@ -1342,9 +1499,7 @@ export default function HomePage() {
                                 </td>
                                 <td className="px-6 py-5">
                                   <span className="font-mono-dm text-[11px] text-white/30">
-                                    {invite.status === "accepted"
-                                      ? "Membro da equipe"
-                                      : "Convidado"}
+                                    {projectRoleLabel[inviteRole]} em {inviteProjectName}
                                   </span>
                                 </td>
                                 <td className="px-6 py-5">
@@ -1367,6 +1522,7 @@ export default function HomePage() {
                                           invite._id,
                                           invite.status,
                                           invite.email,
+                                          getInviteProjectId(invite),
                                         )
                                       }
                                       disabled={cancelingInviteId === invite._id}
