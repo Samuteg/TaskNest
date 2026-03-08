@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
+  type TaskPriority = "low" | "medium" | "high";
+  type TaskChecklistItem = {
+    text: string;
+    done: boolean;
+  };
   type TaskItem = {
     _id: string;
     title: string;
@@ -29,6 +34,10 @@ export default function HomePage() {
     status: "todo" | "in-progress" | "done";
     createdAt: string;
     order?: number;
+    dueDate?: string | null;
+    priority?: TaskPriority;
+    assignee?: string;
+    checklist?: TaskChecklistItem[];
   };
   type TaskStatus = TaskItem["status"];
   type TeamInviteStatus = "pending" | "accepted" | "declined";
@@ -107,6 +116,23 @@ export default function HomePage() {
       label: "Recusado",
       accent: "border-red-400/20 bg-red-400/5 text-red-400",
       dot: "bg-red-400",
+    },
+  };
+  const priorityMeta: Record<
+    TaskPriority,
+    { label: string; badgeClass: string }
+  > = {
+    low: {
+      label: "Baixa",
+      badgeClass: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+    },
+    medium: {
+      label: "Média",
+      badgeClass: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+    },
+    high: {
+      label: "Alta",
+      badgeClass: "border-red-400/20 bg-red-400/10 text-red-300",
     },
   };
 
@@ -905,6 +931,42 @@ export default function HomePage() {
                                 const isDragOver =
                                   dragOverTaskId === task._id &&
                                   draggedTaskId !== task._id;
+                                const priorityKey: TaskPriority =
+                                  task.priority && priorityMeta[task.priority]
+                                    ? task.priority
+                                    : "medium";
+                                const taskPriority = priorityMeta[priorityKey];
+                                const normalizedAssignee = task.assignee?.trim();
+                                const checklistTotal = Array.isArray(task.checklist)
+                                  ? task.checklist.length
+                                  : 0;
+                                const checklistDone =
+                                  checklistTotal > 0
+                                    ? task.checklist!.filter((item) => item.done)
+                                        .length
+                                    : 0;
+                                const hasDueDate = Boolean(task.dueDate);
+                                const parsedDueDate = hasDueDate
+                                  ? new Date(task.dueDate as string)
+                                  : null;
+                                const isDueDateValid = Boolean(
+                                  parsedDueDate &&
+                                    !Number.isNaN(parsedDueDate.getTime()),
+                                );
+                                const dueDateDeadlineTs =
+                                  parsedDueDate && isDueDateValid
+                                    ? new Date(parsedDueDate).setHours(
+                                        23,
+                                        59,
+                                        59,
+                                        999,
+                                      )
+                                    : null;
+                                const isOverdue = Boolean(
+                                  dueDateDeadlineTs &&
+                                    task.status !== "done" &&
+                                    dueDateDeadlineTs < Date.now(),
+                                );
 
                                 return (
                                   <article
@@ -958,6 +1020,35 @@ export default function HomePage() {
                                             {task.description}
                                           </p>
                                         )}
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                          <span
+                                            className={`font-mono-dm inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${taskPriority.badgeClass}`}
+                                          >
+                                            {taskPriority.label}
+                                          </span>
+                                          {isDueDateValid && (
+                                            <span
+                                              className={`font-mono-dm inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                                                isOverdue
+                                                  ? "border-red-400/30 bg-red-400/10 text-red-300"
+                                                  : "border-white/[0.08] bg-white/[0.04] text-white/40"
+                                              }`}
+                                            >
+                                              Prazo {formatDate(task.dueDate as string)}
+                                            </span>
+                                          )}
+                                          {normalizedAssignee && (
+                                            <span className="font-mono-dm inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/40">
+                                              Resp. {normalizedAssignee}
+                                            </span>
+                                          )}
+                                          {checklistTotal > 0 && (
+                                            <span className="font-mono-dm inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/40">
+                                              Checklist {checklistDone}/
+                                              {checklistTotal}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
 

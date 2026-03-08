@@ -3,6 +3,58 @@ import mongoose from "mongoose";
 import { canUserAccessProject } from "../lib/teamAccess.js";
 
 const allowedStatuses = new Set(["todo", "in-progress", "done"]);
+const allowedPriorities = new Set(["low", "medium", "high"]);
+
+const parseDueDate = (rawDueDate) => {
+  if (
+    typeof rawDueDate === "undefined" ||
+    rawDueDate === null ||
+    rawDueDate === ""
+  ) {
+    return { value: null };
+  }
+
+  const normalizedInput =
+    typeof rawDueDate === "string" ? rawDueDate.trim() : rawDueDate;
+
+  if (typeof normalizedInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(normalizedInput)) {
+    const parsedDate = new Date(`${normalizedInput}T12:00:00.000Z`);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { error: "Prazo inválido." };
+    }
+    return { value: parsedDate };
+  }
+
+  const parsedDate = new Date(normalizedInput);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return { error: "Prazo inválido." };
+  }
+
+  return { value: parsedDate };
+};
+
+const normalizeChecklist = (rawChecklist) => {
+  if (!Array.isArray(rawChecklist)) {
+    return { error: "Checklist inválida." };
+  }
+
+  if (rawChecklist.length > 30) {
+    return { error: "Checklist pode ter no máximo 30 itens." };
+  }
+
+  const normalizedChecklist = rawChecklist
+    .map((item) => {
+      const text = typeof item?.text === "string" ? item.text.trim() : "";
+      if (!text) return null;
+      return {
+        text: text.slice(0, 200),
+        done: Boolean(item?.done),
+      };
+    })
+    .filter(Boolean);
+
+  return { value: normalizedChecklist };
+};
 
 export const getTasks = async (req, res) => {
   try {
@@ -34,11 +86,17 @@ export const getTasks = async (req, res) => {
 export const createTask = async (req, res) => {
   try {
     const title = String(req.body?.title || "").trim();
-    const description = typeof req.body?.description === "string"
+    const description =
+      typeof req.body?.description === "string"
       ? req.body.description.trim()
       : "";
     const project = String(req.body?.project || "");
     const status = String(req.body?.status || "todo");
+    const rawPriority = String(req.body?.priority || "medium");
+    const assignee =
+      typeof req.body?.assignee === "string" ? req.body.assignee.trim() : "";
+    const checklistInput =
+      typeof req.body?.checklist === "undefined" ? [] : req.body.checklist;
 
     if (!title || !project) {
       return res.status(400).json({ message: "Título e projeto são obrigatórios." });
@@ -59,6 +117,26 @@ export const createTask = async (req, res) => {
       return res.status(403).json({ message: "Sem permissão para este projeto." });
     }
 
+    if (assignee.length > 120) {
+      return res.status(400).json({
+        message: "Responsável deve ter no máximo 120 caracteres.",
+      });
+    }
+
+    const dueDateResult = parseDueDate(req.body?.dueDate);
+    if (dueDateResult.error) {
+      return res.status(400).json({ message: dueDateResult.error });
+    }
+
+    if (!allowedPriorities.has(rawPriority)) {
+      return res.status(400).json({ message: "Prioridade inválida." });
+    }
+
+    const checklistResult = normalizeChecklist(checklistInput);
+    if (checklistResult.error) {
+      return res.status(400).json({ message: checklistResult.error });
+    }
+
     const latestTask = await Task.findOne({
       project,
     }).sort({ order: -1, createdAt: -1 });
@@ -70,6 +148,10 @@ export const createTask = async (req, res) => {
       title,
       description,
       status: allowedStatuses.has(status) ? status : "todo",
+      dueDate: dueDateResult.value,
+      priority: rawPriority,
+      assignee,
+      checklist: checklistResult.value,
       project,
       user: req.user._id,
       order: nextOrder,
@@ -86,6 +168,7 @@ export const createTask = async (req, res) => {
 export const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
+    const payload = req.body || {};
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({ message: "Tarefa inválida." });
     }
@@ -113,8 +196,55 @@ export const updateTask = async (req, res) => {
       updateData.description = req.body.description.trim();
     }
 
-    if (typeof req.body?.status === "string" && allowedStatuses.has(req.body.status)) {
+    if (Object.prototype.hasOwnProperty.call(payload, "status")) {
+      if (
+        typeof req.body?.status !== "string" ||
+        !allowedStatuses.has(req.body.status)
+      ) {
+        return res.status(400).json({ message: "Status inválido." });
+      }
       updateData.status = req.body.status;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "priority")) {
+      if (
+        typeof req.body?.priority !== "string" ||
+        !allowedPriorities.has(req.body.priority)
+      ) {
+        return res.status(400).json({ message: "Prioridade inválida." });
+      }
+      updateData.priority = req.body.priority;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "dueDate")) {
+      const dueDateResult = parseDueDate(req.body?.dueDate);
+      if (dueDateResult.error) {
+        return res.status(400).json({ message: dueDateResult.error });
+      }
+      updateData.dueDate = dueDateResult.value;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "assignee")) {
+      if (typeof req.body?.assignee !== "string") {
+        return res.status(400).json({ message: "Responsável inválido." });
+      }
+
+      const normalizedAssignee = req.body.assignee.trim();
+      if (normalizedAssignee.length > 120) {
+        return res.status(400).json({
+          message: "Responsável deve ter no máximo 120 caracteres.",
+        });
+      }
+
+      updateData.assignee = normalizedAssignee;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "checklist")) {
+      const checklistResult = normalizeChecklist(req.body?.checklist);
+      if (checklistResult.error) {
+        return res.status(400).json({ message: checklistResult.error });
+      }
+      updateData.checklist = checklistResult.value;
     }
 
     if (
