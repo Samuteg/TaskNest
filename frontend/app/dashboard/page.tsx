@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import TaskModal from "../components/TaskModal";
 import SettingsModal from "../components/SettingsModal";
+import NewProjectModal from "../components/NewProjectModal";
 import { apiUrl } from "../lib/api";
 import {
   Trash2,
@@ -195,6 +196,9 @@ export default function HomePage() {
   const [isReorderingTasks, setIsReorderingTasks] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [projectCreationError, setProjectCreationError] = useState("");
   const [editingTask, setEditingTask] = useState<any>(null);
   const [teamInvites, setTeamInvites] = useState<TeamInviteItem[]>([]);
   const [receivedTeamInvites, setReceivedTeamInvites] = useState<
@@ -319,18 +323,39 @@ export default function HomePage() {
     loadTeamInvites();
   }, [currentView]);
 
-  const handleCreateProject = async () => {
-    const name = window.prompt("Nome do novo projeto:");
+  const openCreateProjectModal = () => {
+    setProjectCreationError("");
+    setIsProjectModalOpen(true);
+  };
+
+  const handleCreateProject = async (projectName: string) => {
+    const name = projectName.trim();
     if (!name) return;
+    setIsCreatingProject(true);
+    setProjectCreationError("");
     try {
-      await fetch(apiUrl("/api/projects"), {
+      const res = await fetch(apiUrl("/api/projects"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
         credentials: "include",
       });
-      fetchProjects();
-    } catch {}
+      if (!res.ok) {
+        let errorMessage = "Não foi possível criar o projeto.";
+        try {
+          const payload = await res.json();
+          if (payload?.message) errorMessage = payload.message;
+        } catch {}
+        setProjectCreationError(errorMessage);
+        return;
+      }
+      await fetchProjects();
+      setIsProjectModalOpen(false);
+    } catch {
+      setProjectCreationError("Erro ao criar projeto. Tente novamente.");
+    } finally {
+      setIsCreatingProject(false);
+    }
   };
 
   const handleDeleteProject = async (
@@ -699,7 +724,7 @@ export default function HomePage() {
                       </p>
                     </div>
                     <button
-                      onClick={handleCreateProject}
+                      onClick={openCreateProjectModal}
                       className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-5 py-3 text-sm font-bold text-white"
                     >
                       <Plus size={16} /> Novo Projeto
@@ -716,7 +741,7 @@ export default function HomePage() {
                         Nenhum projeto ainda
                       </p>
                       <button
-                        onClick={handleCreateProject}
+                        onClick={openCreateProjectModal}
                         className="btn-fuchsia inline-flex items-center gap-2 rounded-xl bg-[#4a044e] px-4 py-2.5 text-sm font-bold text-white"
                       >
                         <Plus size={14} /> Criar primeiro projeto
@@ -1308,6 +1333,19 @@ export default function HomePage() {
           </main>
         </div>
       </div>
+
+      <NewProjectModal
+        key={isProjectModalOpen ? "project-modal-open" : "project-modal-closed"}
+        isOpen={isProjectModalOpen}
+        onClose={() => {
+          if (isCreatingProject) return;
+          setIsProjectModalOpen(false);
+          setProjectCreationError("");
+        }}
+        onCreate={handleCreateProject}
+        isLoading={isCreatingProject}
+        error={projectCreationError}
+      />
 
       <TaskModal
         isOpen={isTaskModalOpen}
