@@ -19,6 +19,11 @@ import {
   Calendar,
   Check,
   X,
+  MessageSquareText,
+  History,
+  Bell,
+  AtSign,
+  SendHorizontal,
 } from "lucide-react";
 
 export default function HomePage() {
@@ -72,6 +77,28 @@ export default function HomePage() {
       fullName?: string;
       email?: string;
     } | null;
+  };
+  type CollaborationEventKind = "comment" | "activity" | "notification";
+  type CollaborationActor = {
+    _id: string;
+    fullName?: string;
+    email?: string;
+  } | null;
+  type CollaborationTaskRef = {
+    _id: string;
+    title?: string;
+  } | null;
+  type CollaborationItem = {
+    _id: string;
+    kind: CollaborationEventKind;
+    content: string;
+    createdAt: string;
+    mentions?: string[];
+    audienceEmail?: string | null;
+    readAt?: string | null;
+    actor?: CollaborationActor;
+    task?: CollaborationTaskRef | string | null;
+    metadata?: Record<string, unknown>;
   };
 
   const kanbanColumns: Array<{
@@ -163,6 +190,35 @@ export default function HomePage() {
   const formatDate = (dateString: string) => {
     if (!dateString) return "25/01/2026";
     return new Date(dateString).toLocaleDateString("pt-BR");
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return "25/01/2026 00:00";
+    const parsedDate = new Date(dateString);
+    if (Number.isNaN(parsedDate.getTime())) return "25/01/2026 00:00";
+    return parsedDate.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const renderMentions = (text: string) => {
+    return text.split(/(@[^\s@]+@[^\s@]+\.[^\s@]+)/g).map((part, index) => {
+      if (!part.startsWith("@")) {
+        return <span key={`plain-${index}`}>{part}</span>;
+      }
+      return (
+        <span
+          key={`mention-${index}`}
+          className="rounded-md bg-fuchsia-400/10 px-1 py-0.5 text-fuchsia-300"
+        >
+          {part}
+        </span>
+      );
+    });
   };
 
   const sortTasksByDisplayOrder = (taskList: TaskItem[]) => {
@@ -281,6 +337,19 @@ export default function HomePage() {
   const [respondingInviteId, setRespondingInviteId] = useState<string | null>(
     null,
   );
+  const [collaborationComments, setCollaborationComments] = useState<
+    CollaborationItem[]
+  >([]);
+  const [collaborationActivities, setCollaborationActivities] = useState<
+    CollaborationItem[]
+  >([]);
+  const [collaborationNotifications, setCollaborationNotifications] = useState<
+    CollaborationItem[]
+  >([]);
+  const [isLoadingCollaboration, setIsLoadingCollaboration] = useState(false);
+  const [isPostingComment, setIsPostingComment] = useState(false);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentTaskId, setCommentTaskId] = useState("");
 
   const activeProject = projects.find((p) => p._id === activeProjectId);
   const canEditActiveProjectTasks = Boolean(
@@ -288,6 +357,9 @@ export default function HomePage() {
       activeProject?.accessRole === "admin" ||
       activeProject?.accessRole === "editor",
   );
+  const unreadNotificationCount = collaborationNotifications.filter(
+    (notification) => !notification.readAt,
+  ).length;
 
   const fetchUserData = async () => {
     try {
@@ -326,6 +398,40 @@ export default function HomePage() {
     }
   };
 
+  const fetchCollaborationFeed = async (
+    projectId: string,
+    options?: { silent?: boolean },
+  ) => {
+    try {
+      if (!options?.silent) setIsLoadingCollaboration(true);
+      const res = await fetch(apiUrl(`/api/collaboration/projects/${projectId}/feed`), {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        setCollaborationComments([]);
+        setCollaborationActivities([]);
+        setCollaborationNotifications([]);
+        return;
+      }
+
+      const payload = (await res.json()) as {
+        comments?: CollaborationItem[];
+        activities?: CollaborationItem[];
+        notifications?: CollaborationItem[];
+      };
+      setCollaborationComments(payload.comments || []);
+      setCollaborationActivities(payload.activities || []);
+      setCollaborationNotifications(payload.notifications || []);
+    } catch (error) {
+      console.error("Erro ao carregar feed de colaboração:", error);
+      setCollaborationComments([]);
+      setCollaborationActivities([]);
+      setCollaborationNotifications([]);
+    } finally {
+      if (!options?.silent) setIsLoadingCollaboration(false);
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       await fetchUserData();
@@ -338,6 +444,29 @@ export default function HomePage() {
   useEffect(() => {
     if (activeProjectId) fetchTasks(activeProjectId);
   }, [activeProjectId]);
+
+  useEffect(() => {
+    if (!activeProjectId || currentView !== "tasks") return;
+
+    fetchCollaborationFeed(activeProjectId);
+
+    const pollingId = window.setInterval(() => {
+      fetchCollaborationFeed(activeProjectId, { silent: true });
+    }, 30000);
+
+    return () => window.clearInterval(pollingId);
+  }, [activeProjectId, currentView]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setCommentDraft("");
+    setCommentTaskId("");
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    if (!commentTaskId) return;
+    const taskStillExists = tasks.some((task) => task._id === commentTaskId);
+    if (!taskStillExists) setCommentTaskId("");
+  }, [tasks, commentTaskId]);
 
   useEffect(() => {
     if (currentView !== "team") return;
@@ -454,7 +583,10 @@ export default function HomePage() {
         method: "DELETE",
         credentials: "include",
       });
-      if (activeProjectId) fetchTasks(activeProjectId);
+      if (activeProjectId) {
+        fetchTasks(activeProjectId);
+        fetchCollaborationFeed(activeProjectId, { silent: true });
+      }
     } catch {}
   };
 
@@ -579,6 +711,10 @@ export default function HomePage() {
         });
       }
 
+      if (activeProjectId && selectedProject._id === activeProjectId) {
+        fetchCollaborationFeed(activeProjectId, { silent: true });
+      }
+
       window.alert("Convite enviado com sucesso.");
     } catch (error) {
       console.error("Erro ao convidar membro:", error);
@@ -628,6 +764,9 @@ export default function HomePage() {
             )
           : prev.filter((invite) => invite._id !== inviteId),
       );
+      if (activeProjectId && projectId === activeProjectId) {
+        fetchCollaborationFeed(activeProjectId, { silent: true });
+      }
       window.alert(
         payload?.message ||
           (status === "accepted"
@@ -677,11 +816,82 @@ export default function HomePage() {
           ? "Convite aceito com sucesso."
           : "Convite recusado com sucesso.",
       );
+      const relatedProjectId = payload ? getInviteProjectId(payload) : "";
+      if (activeProjectId && relatedProjectId === activeProjectId) {
+        fetchCollaborationFeed(activeProjectId, { silent: true });
+      }
     } catch (error) {
       console.error("Erro ao responder convite:", error);
       window.alert("Erro ao responder convite. Tente novamente.");
     } finally {
       setRespondingInviteId(null);
+    }
+  };
+
+  const handlePostComment = async () => {
+    const content = commentDraft.trim();
+    if (!activeProjectId) return;
+    if (!content) {
+      window.alert("Escreva um comentário para publicar.");
+      return;
+    }
+
+    setIsPostingComment(true);
+    try {
+      const res = await fetch(
+        apiUrl(`/api/collaboration/projects/${activeProjectId}/comments`),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content,
+            taskId: commentTaskId || null,
+          }),
+          credentials: "include",
+        },
+      );
+      const payload = (await res.json().catch(() => null)) as
+        | (CollaborationItem & { message?: string })
+        | null;
+      if (!res.ok) {
+        window.alert(payload?.message || "Não foi possível enviar o comentário.");
+        return;
+      }
+
+      if (payload?._id) {
+        setCollaborationComments((prev) => [payload, ...prev].slice(0, 40));
+      }
+
+      setCommentDraft("");
+      setCommentTaskId("");
+      fetchCollaborationFeed(activeProjectId, { silent: true });
+    } catch (error) {
+      console.error("Erro ao enviar comentário:", error);
+      window.alert("Erro ao enviar comentário. Tente novamente.");
+    } finally {
+      setIsPostingComment(false);
+    }
+  };
+
+  const handleMarkNotificationAsRead = async (notificationId: string) => {
+    try {
+      const res = await fetch(
+        apiUrl(`/api/collaboration/notifications/${notificationId}/read`),
+        {
+          method: "PATCH",
+          credentials: "include",
+        },
+      );
+      if (!res.ok) return;
+      const payload = (await res.json().catch(() => null)) as CollaborationItem | null;
+      if (!payload) return;
+      setCollaborationNotifications((prev) =>
+        prev.map((notification) =>
+          notification._id === notificationId ? payload : notification,
+        ),
+      );
+    } catch (error) {
+      console.error("Erro ao marcar notificação:", error);
     }
   };
 
@@ -780,6 +990,7 @@ export default function HomePage() {
     setIsReorderingTasks(true);
     try {
       await persistTasksBoard(reorderedTasks, previousTasks);
+      fetchCollaborationFeed(activeProjectId, { silent: true });
     } catch (err) {
       console.error("Erro ao guardar Kanban:", err);
       fetchTasks(activeProjectId);
@@ -1258,6 +1469,226 @@ export default function HomePage() {
                       )}
                     </div>
                   )}
+
+                  <div className="mt-8 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+                    <section className="rounded-2xl border border-white/[0.06] bg-[#131316] p-5">
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <div>
+                          <div className="font-mono-dm mb-1 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-fuchsia-400/60">
+                            <MessageSquareText size={12} />
+                            Discussão
+                          </div>
+                          <p className="text-sm text-white/45">
+                            Comentários do projeto com menções para notificar o time.
+                          </p>
+                        </div>
+                        <span className="font-mono-dm rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] uppercase tracking-wider text-white/40">
+                          {collaborationComments.length} comentários
+                        </span>
+                      </div>
+
+                      <div className="mb-4 rounded-xl border border-white/[0.06] bg-[#0d0d0f] p-3">
+                        <textarea
+                          rows={3}
+                          value={commentDraft}
+                          onChange={(event) => setCommentDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                              event.preventDefault();
+                              if (!isPostingComment) handlePostComment();
+                            }
+                          }}
+                          placeholder="Comente algo e mencione pessoas com @email..."
+                          className="w-full resize-none border-none bg-transparent text-sm text-white placeholder:text-white/20 outline-none"
+                        />
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={commentTaskId}
+                              onChange={(event) => setCommentTaskId(event.target.value)}
+                              className="font-mono-dm rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[10px] uppercase tracking-wider text-white/50 outline-none"
+                            >
+                              <option value="">Projeto (sem tarefa)</option>
+                              {tasks.map((task) => (
+                                <option
+                                  key={`comment-task-${task._id}`}
+                                  value={task._id}
+                                  className="bg-[#131316] text-white"
+                                >
+                                  {task.title}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="font-mono-dm inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/25">
+                              <AtSign size={11} />
+                              Use @email para menções
+                            </span>
+                          </div>
+                          <button
+                            onClick={handlePostComment}
+                            disabled={isPostingComment}
+                            className="btn-fuchsia inline-flex items-center justify-center gap-2 rounded-lg bg-[#4a044e] px-3.5 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isPostingComment ? (
+                              <Loader2 size={13} className="animate-spin" />
+                            ) : (
+                              <SendHorizontal size={13} />
+                            )}
+                            {isPostingComment ? "Enviando..." : "Publicar"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {isLoadingCollaboration ? (
+                        <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                          <span className="font-mono-dm inline-flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/30">
+                            <Loader2 size={12} className="animate-spin" />
+                            Carregando discussão...
+                          </span>
+                        </div>
+                      ) : collaborationComments.length > 0 ? (
+                        <div className="max-h-[380px] space-y-3 overflow-y-auto pr-1">
+                          {collaborationComments.map((comment) => {
+                            const authorName =
+                              comment.actor?.fullName || comment.actor?.email || "Membro";
+                            const linkedTask =
+                              comment.task && typeof comment.task !== "string"
+                                ? comment.task.title
+                                : "";
+
+                            return (
+                              <article
+                                key={comment._id}
+                                className="rounded-xl border border-white/[0.06] bg-[#0d0d0f] p-3.5"
+                              >
+                                <div className="mb-2 flex items-center justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-white/80">
+                                      {authorName}
+                                    </p>
+                                    <p className="font-mono-dm text-[10px] text-white/30">
+                                      {formatDateTime(comment.createdAt)}
+                                    </p>
+                                  </div>
+                                  {linkedTask && (
+                                    <span className="font-mono-dm rounded-full border border-fuchsia-400/20 bg-fuchsia-400/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-fuchsia-300">
+                                      {linkedTask}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/60">
+                                  {renderMentions(comment.content)}
+                                </p>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex min-h-[180px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                          <span className="font-mono-dm text-[10px] uppercase tracking-wider text-white/20">
+                            Ainda sem comentários neste projeto.
+                          </span>
+                        </div>
+                      )}
+                    </section>
+
+                    <div className="space-y-4">
+                      <section className="rounded-2xl border border-white/[0.06] bg-[#131316] p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="font-mono-dm inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-fuchsia-400/60">
+                            <History size={12} />
+                            Histórico
+                          </div>
+                          <span className="font-mono-dm text-[10px] uppercase tracking-wider text-white/25">
+                            últimas ações
+                          </span>
+                        </div>
+                        {isLoadingCollaboration ? (
+                          <div className="flex h-[148px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                            <Loader2 size={14} className="animate-spin text-white/30" />
+                          </div>
+                        ) : collaborationActivities.length > 0 ? (
+                          <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                            {collaborationActivities.slice(0, 12).map((activity) => (
+                              <article
+                                key={activity._id}
+                                className="rounded-lg border border-white/[0.05] bg-[#0d0d0f] p-2.5"
+                              >
+                                <p className="text-xs leading-relaxed text-white/55">
+                                  {activity.content}
+                                </p>
+                                <p className="font-mono-dm mt-1 text-[10px] text-white/25">
+                                  {formatDateTime(activity.createdAt)}
+                                </p>
+                              </article>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex h-[148px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                            <p className="font-mono-dm text-[10px] uppercase tracking-wider text-white/20">
+                              Nenhuma atividade registrada.
+                            </p>
+                          </div>
+                        )}
+                      </section>
+
+                      <section className="rounded-2xl border border-white/[0.06] bg-[#131316] p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="font-mono-dm inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-fuchsia-400/60">
+                            <Bell size={12} />
+                            Notificações
+                          </div>
+                          <span className="font-mono-dm rounded-full border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/40">
+                            {unreadNotificationCount} não lidas
+                          </span>
+                        </div>
+                        {isLoadingCollaboration ? (
+                          <div className="flex h-[148px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                            <Loader2 size={14} className="animate-spin text-white/30" />
+                          </div>
+                        ) : collaborationNotifications.length > 0 ? (
+                          <div className="max-h-[220px] space-y-2 overflow-y-auto pr-1">
+                            {collaborationNotifications.map((notification) => (
+                              <article
+                                key={notification._id}
+                                className={`rounded-lg border p-2.5 ${
+                                  notification.readAt
+                                    ? "border-white/[0.05] bg-[#0d0d0f]"
+                                    : "border-fuchsia-400/20 bg-fuchsia-400/[0.08]"
+                                }`}
+                              >
+                                <p className="text-xs leading-relaxed text-white/65">
+                                  {notification.content}
+                                </p>
+                                <div className="mt-1.5 flex items-center justify-between gap-3">
+                                  <p className="font-mono-dm text-[10px] text-white/30">
+                                    {formatDateTime(notification.createdAt)}
+                                  </p>
+                                  {!notification.readAt && (
+                                    <button
+                                      onClick={() =>
+                                        handleMarkNotificationAsRead(notification._id)
+                                      }
+                                      className="font-mono-dm inline-flex items-center gap-1 rounded-md border border-white/[0.1] bg-white/[0.04] px-2 py-1 text-[10px] uppercase tracking-wider text-white/45 transition-colors hover:text-white"
+                                    >
+                                      <Check size={11} />
+                                      Marcar lida
+                                    </button>
+                                  )}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex h-[148px] items-center justify-center rounded-xl border border-dashed border-white/[0.06]">
+                            <p className="font-mono-dm text-[10px] uppercase tracking-wider text-white/20">
+                              Sem notificações para você.
+                            </p>
+                          </div>
+                        )}
+                      </section>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -1597,7 +2028,11 @@ export default function HomePage() {
       <TaskModal
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
-        onSuccess={() => fetchTasks(activeProjectId!)}
+        onSuccess={() => {
+          if (!activeProjectId) return;
+          fetchTasks(activeProjectId);
+          fetchCollaborationFeed(activeProjectId, { silent: true });
+        }}
         projectId={activeProjectId}
         taskToEdit={editingTask}
       />

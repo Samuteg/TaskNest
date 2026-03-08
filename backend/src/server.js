@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
 import teamRoutes from "./routes/team.route.js";
+import collaborationRoutes from "./routes/collaboration.route.js";
 import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 
@@ -36,6 +37,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/team", teamRoutes);
+app.use("/api/collaboration", collaborationRoutes);
 
 app.get("/", (req, res) => {
   res.status(200).json({ status: "ok", service: "TaskNest API" });

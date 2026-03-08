@@ -5,8 +5,27 @@ import {
   normalizeProjectRole,
   PROJECT_ROLES,
 } from "../lib/teamAccess.js";
+import {
+  createActivityEvent,
+  createNotificationEvent,
+} from "../lib/collaboration.js";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const roleLabelByValue = {
+  viewer: "Viewer",
+  editor: "Editor",
+  admin: "Admin",
+};
+
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+
+const runSafeCollaborationOperation = async (action) => {
+  try {
+    await action();
+  } catch (error) {
+    console.error("Erro ao registrar colaboração de equipe:", error.message);
+  }
+};
 
 export const listTeamInvites = async (req, res) => {
   try {
@@ -51,9 +70,7 @@ export const listReceivedTeamInvites = async (req, res) => {
 
 export const createTeamInvite = async (req, res) => {
   try {
-    const normalizedEmail = String(req.body?.email || "")
-      .trim()
-      .toLowerCase();
+    const normalizedEmail = normalizeEmail(req.body?.email);
     const projectId = String(req.body?.projectId || "").trim();
     const rawRole = String(req.body?.role || "viewer")
       .trim()
@@ -94,6 +111,42 @@ export const createTeamInvite = async (req, res) => {
       });
     }
 
+    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const projectName = project?.name || "Projeto";
+    const roleLabel = roleLabelByValue[role] || "Viewer";
+
+    const registerInviteEvents = async ({
+      action,
+      activityContent,
+      notificationContent,
+    }) => {
+      await runSafeCollaborationOperation(() =>
+        createActivityEvent({
+          projectId,
+          actorId: req.user._id,
+          content: activityContent,
+          metadata: {
+            action,
+            email: normalizedEmail,
+            role,
+          },
+        }),
+      );
+
+      await runSafeCollaborationOperation(() =>
+        createNotificationEvent({
+          projectId,
+          actorId: req.user._id,
+          audienceEmail: normalizedEmail,
+          content: notificationContent,
+          metadata: {
+            action,
+            role,
+          },
+        }),
+      );
+    };
+
     const latestInvite = await TeamInvite.findOne({
       email: normalizedEmail,
       project: projectId,
@@ -110,6 +163,12 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
+      const inviteProjectName = latestInvite.project?.name || projectName;
+      await registerInviteEvents({
+        action: "team.member.role.updated",
+        activityContent: `${actorName} atualizou o papel de ${normalizedEmail} para ${roleLabel} em "${inviteProjectName}".`,
+        notificationContent: `Seu papel em "${inviteProjectName}" foi atualizado para ${roleLabel}.`,
+      });
       return res.status(200).json(latestInvite);
     }
 
@@ -118,6 +177,12 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
+      const inviteProjectName = latestInvite.project?.name || projectName;
+      await registerInviteEvents({
+        action: "team.invite.updated",
+        activityContent: `${actorName} atualizou o convite de ${normalizedEmail} para ${roleLabel} em "${inviteProjectName}".`,
+        notificationContent: `Seu convite para "${inviteProjectName}" foi atualizado para o papel ${roleLabel}.`,
+      });
       return res.status(200).json(latestInvite);
     }
 
@@ -127,6 +192,12 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
+      const inviteProjectName = latestInvite.project?.name || projectName;
+      await registerInviteEvents({
+        action: "team.invite.resent",
+        activityContent: `${actorName} reenviou o convite para ${normalizedEmail} como ${roleLabel} em "${inviteProjectName}".`,
+        notificationContent: `Você recebeu novamente um convite para "${inviteProjectName}" como ${roleLabel}.`,
+      });
       return res.status(200).json(latestInvite);
     }
 
@@ -137,6 +208,13 @@ export const createTeamInvite = async (req, res) => {
       role,
     });
     await invite.populate("project", "name");
+    const inviteProjectName = invite.project?.name || projectName;
+
+    await registerInviteEvents({
+      action: "team.invite.created",
+      activityContent: `${actorName} convidou ${normalizedEmail} como ${roleLabel} para "${inviteProjectName}".`,
+      notificationContent: `Você recebeu um convite para colaborar em "${inviteProjectName}" como ${roleLabel}.`,
+    });
 
     res.status(201).json(invite);
   } catch (error) {
@@ -152,7 +230,10 @@ export const cancelTeamInvite = async (req, res) => {
       return res.status(400).json({ message: "ID de convite inválido." });
     }
 
-    const invite = await TeamInvite.findOne({ _id: id, project: { $ne: null } });
+    const invite = await TeamInvite.findOne({ _id: id, project: { $ne: null } }).populate(
+      "project",
+      "name",
+    );
 
     if (!invite) {
       return res.status(404).json({ message: "Convite não encontrado." });
@@ -160,7 +241,7 @@ export const cancelTeamInvite = async (req, res) => {
 
     const { allowed, project } = await canUserAccessProjectWithRole(
       req.user,
-      invite.project,
+      invite.project?._id || invite.project,
       "admin",
     );
 
@@ -175,16 +256,79 @@ export const cancelTeamInvite = async (req, res) => {
     }
 
     const previousStatus = invite.status;
+    const inviteEmail = normalizeEmail(invite.email);
+    const projectId = invite.project?._id || invite.project;
+    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const projectName = invite.project?.name || project?.name || "Projeto";
 
     if (previousStatus === "accepted") {
       await TeamInvite.deleteMany({
         email: invite.email,
-        project: invite.project,
+        project: projectId,
       });
+
+      await runSafeCollaborationOperation(() =>
+        createActivityEvent({
+          projectId,
+          actorId: req.user._id,
+          content: `${actorName} removeu ${inviteEmail} do projeto "${projectName}".`,
+          metadata: {
+            action: "team.member.removed",
+            email: inviteEmail,
+          },
+        }),
+      );
+
+      await runSafeCollaborationOperation(() =>
+        createNotificationEvent({
+          projectId,
+          actorId: req.user._id,
+          audienceEmail: inviteEmail,
+          content: `Seu acesso ao projeto "${projectName}" foi removido.`,
+          metadata: {
+            action: "team.member.removed",
+          },
+        }),
+      );
+
       return res.status(200).json({ message: "Membro removido do projeto com sucesso." });
     }
 
     await invite.deleteOne();
+
+    const activityAction =
+      previousStatus === "declined" ? "team.invite.record.removed" : "team.invite.canceled";
+    const activityContent =
+      previousStatus === "declined"
+        ? `${actorName} removeu o registro de convite recusado de ${inviteEmail} em "${projectName}".`
+        : `${actorName} cancelou o convite de ${inviteEmail} em "${projectName}".`;
+
+    await runSafeCollaborationOperation(() =>
+      createActivityEvent({
+        projectId,
+        actorId: req.user._id,
+        content: activityContent,
+        metadata: {
+          action: activityAction,
+          email: inviteEmail,
+          previousStatus,
+        },
+      }),
+    );
+
+    if (previousStatus === "pending") {
+      await runSafeCollaborationOperation(() =>
+        createNotificationEvent({
+          projectId,
+          actorId: req.user._id,
+          audienceEmail: inviteEmail,
+          content: `Seu convite para o projeto "${projectName}" foi cancelado.`,
+          metadata: {
+            action: "team.invite.canceled",
+          },
+        }),
+      );
+    }
 
     if (previousStatus === "declined") {
       return res.status(200).json({ message: "Registro de convite removido com sucesso." });
@@ -241,6 +385,47 @@ export const respondToTeamInvite = async (req, res) => {
     // e também declined -> accepted (reconsideração do convite)
     invite.status = status;
     await invite.save();
+
+    const projectId = invite.project?._id || invite.project;
+    const projectName = invite.project?.name || "Projeto";
+    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const action =
+      status === "accepted" ? "team.invite.accepted" : "team.invite.declined";
+    const activityContent =
+      status === "accepted"
+        ? `${actorName} aceitou o convite para "${projectName}".`
+        : `${actorName} recusou o convite para "${projectName}".`;
+
+    await runSafeCollaborationOperation(() =>
+      createActivityEvent({
+        projectId,
+        actorId: req.user._id,
+        content: activityContent,
+        metadata: {
+          action,
+          email: normalizedEmail,
+        },
+      }),
+    );
+
+    const inviterEmail = normalizeEmail(invite.invitedBy?.email);
+    if (inviterEmail && emailRegex.test(inviterEmail) && inviterEmail !== normalizedEmail) {
+      await runSafeCollaborationOperation(() =>
+        createNotificationEvent({
+          projectId,
+          actorId: req.user._id,
+          audienceEmail: inviterEmail,
+          content:
+            status === "accepted"
+              ? `${actorName} aceitou seu convite para "${projectName}".`
+              : `${actorName} recusou seu convite para "${projectName}".`,
+          metadata: {
+            action,
+            email: normalizedEmail,
+          },
+        }),
+      );
+    }
 
     res.status(200).json(invite);
   } catch (error) {
