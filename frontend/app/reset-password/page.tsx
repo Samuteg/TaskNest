@@ -188,7 +188,10 @@ export default function ResetPasswordPage() {
                   placeholder="repita a nova senha"
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
                   className={inputClass}
                 />
