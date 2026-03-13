@@ -31,9 +31,9 @@ const buildEventPayload = ({
   };
 };
 
-export const extractMentionEmails = (text) => {
+export const extractMentionEmails = (text): string[] => {
   const normalizedText = String(text || "");
-  const emails = new Set();
+  const emails = new Set<string>();
 
   let match = mentionEmailRegex.exec(normalizedText);
   while (match) {
@@ -135,7 +135,9 @@ export const createMentionNotifications = async ({
   metadata = {},
 }) => {
   const mentionedEmails = extractMentionEmails(content);
-  const blockedEmails = new Set(excludeEmails.map(normalizeEmail));
+  const blockedEmails = new Set<string>(
+    excludeEmails.map((email) => normalizeEmail(String(email))),
+  );
 
   const targetEmails = mentionedEmails.filter((email) => !blockedEmails.has(email));
 

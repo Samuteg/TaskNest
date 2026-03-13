@@ -169,7 +169,9 @@ export const forgotPassword = async (req, res) => {
       token: plainToken,
     });
 
-    const responsePayload = { message: forgotPasswordGenericMessage };
+    const responsePayload: Record<string, string> = {
+      message: forgotPasswordGenericMessage,
+    };
     if (ENV.NODE_ENV !== "production") {
       responsePayload.devResetToken = plainToken;
       responsePayload.devResetUrl = resetUrl;
@@ -290,7 +292,7 @@ export const updateProfile = async (req, res) => {
   try {
     const { fullName, profilePic } = req.body;
     const userId = req.user._id;
-    const updateData = {};
+    const updateData: Record<string, string> = {};
 
     if (typeof fullName === "string") {
       const normalizedFullName = fullName.trim();
@@ -346,7 +348,10 @@ export const uploadProfilePicture = async (req, res) => {
     }
 
     const userId = req.user._id.toString();
-    const uploadResult = await uploadProfileImageToCloudinary(req.file.buffer, userId);
+    const uploadResult = (await uploadProfileImageToCloudinary(
+      req.file.buffer,
+      userId,
+    )) as { secure_url: string };
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
       { profilePic: uploadResult.secure_url },

@@ -1,7 +1,8 @@
 import TeamInvite from "../models/teamInvite.model.js";
 import Project from "../models/project.model.js";
 
-export const PROJECT_ROLES = ["viewer", "editor", "admin"];
+export const PROJECT_ROLES = ["viewer", "editor", "admin"] as const;
+export type ProjectRole = (typeof PROJECT_ROLES)[number];
 
 const roleWeightByRole = {
   viewer: 1,
@@ -11,16 +12,21 @@ const roleWeightByRole = {
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
-export const normalizeProjectRole = (role) => {
+export const normalizeProjectRole = (role: string): ProjectRole => {
   const normalizedRole = String(role || "")
     .trim()
     .toLowerCase();
 
-  if (PROJECT_ROLES.includes(normalizedRole)) return normalizedRole;
+  if (PROJECT_ROLES.includes(normalizedRole as ProjectRole)) {
+    return normalizedRole as ProjectRole;
+  }
   return "viewer";
 };
 
-export const hasProjectRole = (currentRole, minimumRole = "viewer") => {
+export const hasProjectRole = (
+  currentRole: ProjectRole | string,
+  minimumRole: ProjectRole | string = "viewer",
+) => {
   const normalizedCurrentRole = normalizeProjectRole(currentRole);
   const normalizedMinimumRole = normalizeProjectRole(minimumRole);
 

@@ -88,7 +88,7 @@ export const createTeamInvite = async (req, res) => {
       return res.status(400).json({ message: "Projeto inválido." });
     }
 
-    if (!PROJECT_ROLES.includes(rawRole)) {
+    if (!(PROJECT_ROLES as readonly string[]).includes(rawRole)) {
       return res.status(400).json({
         message: "Papel inválido. Use 'viewer', 'editor' ou 'admin'.",
       });
@@ -163,7 +163,8 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
-      const inviteProjectName = latestInvite.project?.name || projectName;
+      const inviteProjectName =
+        (latestInvite.project as any)?.name || projectName;
       await registerInviteEvents({
         action: "team.member.role.updated",
         activityContent: `${actorName} atualizou o papel de ${normalizedEmail} para ${roleLabel} em "${inviteProjectName}".`,
@@ -177,7 +178,8 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
-      const inviteProjectName = latestInvite.project?.name || projectName;
+      const inviteProjectName =
+        (latestInvite.project as any)?.name || projectName;
       await registerInviteEvents({
         action: "team.invite.updated",
         activityContent: `${actorName} atualizou o convite de ${normalizedEmail} para ${roleLabel} em "${inviteProjectName}".`,
@@ -192,7 +194,8 @@ export const createTeamInvite = async (req, res) => {
       latestInvite.invitedBy = req.user._id;
       await latestInvite.save();
       await latestInvite.populate("project", "name");
-      const inviteProjectName = latestInvite.project?.name || projectName;
+      const inviteProjectName =
+        (latestInvite.project as any)?.name || projectName;
       await registerInviteEvents({
         action: "team.invite.resent",
         activityContent: `${actorName} reenviou o convite para ${normalizedEmail} como ${roleLabel} em "${inviteProjectName}".`,
@@ -208,7 +211,7 @@ export const createTeamInvite = async (req, res) => {
       role,
     });
     await invite.populate("project", "name");
-    const inviteProjectName = invite.project?.name || projectName;
+    const inviteProjectName = (invite.project as any)?.name || projectName;
 
     await registerInviteEvents({
       action: "team.invite.created",
@@ -259,7 +262,8 @@ export const cancelTeamInvite = async (req, res) => {
     const inviteEmail = normalizeEmail(invite.email);
     const projectId = invite.project?._id || invite.project;
     const actorName = req.user?.fullName || req.user?.email || "Alguém";
-    const projectName = invite.project?.name || project?.name || "Projeto";
+    const projectName =
+      (invite.project as any)?.name || (project as any)?.name || "Projeto";
 
     if (previousStatus === "accepted") {
       await TeamInvite.deleteMany({
@@ -387,7 +391,7 @@ export const respondToTeamInvite = async (req, res) => {
     await invite.save();
 
     const projectId = invite.project?._id || invite.project;
-    const projectName = invite.project?.name || "Projeto";
+    const projectName = (invite.project as any)?.name || "Projeto";
     const actorName = req.user?.fullName || req.user?.email || "Alguém";
     const action =
       status === "accepted" ? "team.invite.accepted" : "team.invite.declined";
@@ -408,7 +412,7 @@ export const respondToTeamInvite = async (req, res) => {
       }),
     );
 
-    const inviterEmail = normalizeEmail(invite.invitedBy?.email);
+    const inviterEmail = normalizeEmail((invite.invitedBy as any)?.email);
     if (inviterEmail && emailRegex.test(inviterEmail) && inviterEmail !== normalizedEmail) {
       await runSafeCollaborationOperation(() =>
         createNotificationEvent({

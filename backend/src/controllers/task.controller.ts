@@ -271,7 +271,7 @@ export const updateTask = async (req, res) => {
       return res.status(403).json({ message: "Sem permissão para este projeto." });
     }
 
-    const updateData = {};
+    const updateData: Record<string, any> = {};
     const previousTask = {
       title: task.title,
       description: task.description || "",
