@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            backend/pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+
+      - name: Install backend deps
+        run: pnpm --ignore-workspace -C backend install --frozen-lockfile
+
+      - name: Install frontend deps
+        run: pnpm --ignore-workspace -C frontend install --frozen-lockfile
+
+      - name: Lint frontend
+        run: pnpm --ignore-workspace -C frontend lint
+
+      - name: Typecheck backend
+        run: pnpm --ignore-workspace -C backend typecheck
+
+      - name: Typecheck frontend
+        run: pnpm --ignore-workspace -C frontend exec tsc --noEmit
+
+      - name: Build backend
+        run: pnpm --ignore-workspace -C backend build
+
+      - name: Build frontend
+        run: pnpm --ignore-workspace -C frontend build
+
+      - name: Test backend (if present)
+        run: pnpm --ignore-workspace -C backend test --if-present
+
+      - name: Test frontend (if present)
+        run: pnpm --ignore-workspace -C frontend test --if-present

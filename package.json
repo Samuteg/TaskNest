@@ -1,0 +1,14 @@
+{
+  "name": "tasknest-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,green \"pnpm -C backend dev\" \"pnpm -C frontend dev\"",
+    "build": "pnpm -C backend build && pnpm -C frontend build",
+    "start": "concurrently -k -n backend,frontend -c blue,green \"pnpm -C backend start\" \"pnpm -C frontend start\"",
+    "lint": "pnpm -C frontend lint",
+    "typecheck": "pnpm -C backend typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
