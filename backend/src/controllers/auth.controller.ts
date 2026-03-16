@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { ENV } from "../lib/env.js";
+import { getAuthCookieOptions } from "../lib/utils.js";
 import { sendPasswordResetEmail } from "../lib/email.js";
 import {
   isCloudinaryConfigured,
@@ -277,12 +278,9 @@ export const changePassword = async (req, res) => {
 };
 
 export const logout = (_, res) => {
-  const isProduction = ENV.NODE_ENV === "production";
   res.cookie("jwt", "", {
     maxAge: 0,
-    httpOnly: true,
-    sameSite: isProduction ? "none" : "lax",
-    secure: isProduction,
+    ...getAuthCookieOptions(),
   });
   res.status(200).json({ message: "Logout realizado com sucesso." });
 };

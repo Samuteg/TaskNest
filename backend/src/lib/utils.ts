@@ -1,21 +1,41 @@
 import jwt from "jsonwebtoken";
+import type { CookieOptions } from "express";
 import { ENV } from "./env.js";
+
+const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isHttpsUrl = (value?: string) => {
+  if (!value) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+export const getAuthCookieOptions = (): CookieOptions => {
+  const isProduction = ENV.NODE_ENV === "production";
+  const secure = isProduction || isHttpsUrl(ENV.FRONTEND_URL);
+
+  return {
+    httpOnly: true,
+    sameSite: secure ? "none" : "lax",
+    secure,
+  };
+};
 
 export const generateToken = (userId, res) => {
   const { JWT_SECRET } = ENV;
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
-  const isProduction = ENV.NODE_ENV === "production";
   const token = jwt.sign({ userId }, ENV.JWT_SECRET, {
     expiresIn: "7d",
   });
 
   res.cookie("jwt", token, {
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    httpOnly: true, //prevents XSS attacks
-    sameSite: isProduction ? "none" : "lax",
-    secure: isProduction, // cookie only sent over HTTPS in production
+    ...getAuthCookieOptions(),
+    maxAge: AUTH_COOKIE_MAX_AGE_MS, // 7 days
   });
 
   return token;
