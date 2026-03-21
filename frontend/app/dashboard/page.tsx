@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
+import MobileNav from "../components/MobileNav";
 import TaskModal from "../components/TaskModal";
 import SettingsModal from "../components/SettingsModal";
 import NewProjectModal from "../components/NewProjectModal";
@@ -294,6 +295,7 @@ export default function HomePage() {
   const [user, setUser] = useState<UserItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(true); // always dark to match system
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("tasknest-theme");
@@ -1046,11 +1048,48 @@ export default function HomePage() {
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+        /* Kanban horizontal scroll on mobile */
+        .kanban-board {
+          display: grid;
+          gap: 1rem;
+        }
+        @media (min-width: 1024px) {
+          .kanban-board { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 1023px) {
+          .kanban-board {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+            gap: 0.75rem;
+          }
+          .kanban-board::-webkit-scrollbar { display: none; }
+          .kanban-col {
+            min-width: 280px;
+            max-width: 85vw;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+          }
+        }
+
+        /* Task action buttons always visible on touch */
+        @media (hover: none) {
+          .task-actions { opacity: 1 !important; }
+          .task-card:hover { transform: none; }
+        }
+
+        /* Ensure touch targets are large enough */
+        @media (max-width: 767px) {
+          .btn-fuchsia { min-height: 44px; }
+        }
       `}</style>
 
       <div className="font-syne flex min-h-screen bg-[#0d0d0f] text-white">
         <div className="grid-bg flex min-h-screen w-full">
-          {/* ── SIDEBAR (passthrough) ── */}
+          {/* ── SIDEBAR desktop ── */}
           <Sidebar
             user={user}
             onLogout={handleLogout}
@@ -1059,8 +1098,19 @@ export default function HomePage() {
             setCurrentView={setCurrentView}
           />
 
+          {/* ── MOBILE NAV ── */}
+          <MobileNav
+            user={user}
+            onLogout={handleLogout}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
+
           {/* ── MAIN ── */}
-          <main className="flex-1 overflow-y-auto h-screen px-6 py-8 md:px-10">
+          <main className="flex-1 min-h-screen overflow-y-auto md:h-screen px-4 pt-20 pb-28 md:pt-0 md:pb-8 md:px-10 md:py-8">
             <div className="mx-auto max-w-6xl">
               {/* ════════════════════════════
                   VIEW: PROJECTS
@@ -1230,7 +1280,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Kanban board */}
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div className="kanban-board">
                     {kanbanColumns.map((column) => {
                       const columnTasks = getTasksByStatus(
                         tasks,
@@ -1250,7 +1300,7 @@ export default function HomePage() {
                             canEditActiveProjectTasks &&
                             handleTaskDrop(e, column.status)
                           }
-                          className={`rounded-2xl border bg-[#131316] transition-all ${
+                          className={`kanban-col rounded-2xl border bg-[#131316] transition-all ${
                             isColDragOver
                               ? `border-[#4a044e]/50 ring-1 ring-[#4a044e]/20`
                               : "border-white/[0.06]"
@@ -1414,23 +1464,23 @@ export default function HomePage() {
 
                                     {/* Actions */}
                                     {canEditActiveProjectTasks && (
-                                      <div className="mt-3 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                      <div className="task-actions mt-3 flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                         <button
                                           onClick={() => {
                                             setEditingTask(task);
                                             setIsTaskModalOpen(true);
                                           }}
-                                          className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-fuchsia-400/10 hover:text-fuchsia-400"
+                                          className="rounded-lg p-2 text-white/20 transition-colors hover:bg-fuchsia-400/10 hover:text-fuchsia-400 active:bg-fuchsia-400/10 active:text-fuchsia-400"
                                         >
-                                          <Edit3 size={13} />
+                                          <Edit3 size={14} />
                                         </button>
                                         <button
                                           onClick={() =>
                                             handleDeleteTask(task._id)
                                           }
-                                          className="rounded-lg p-1.5 text-white/20 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                                          className="rounded-lg p-2 text-white/20 transition-colors hover:bg-red-400/10 hover:text-red-400 active:bg-red-400/10 active:text-red-400"
                                         >
-                                          <Trash2 size={13} />
+                                          <Trash2 size={14} />
                                         </button>
                                       </div>
                                     )}
@@ -1697,7 +1747,7 @@ export default function HomePage() {
               ════════════════════════════ */}
               {currentView === "team" && (
                 <>
-                  <div className="mb-10">
+                  <div className="mb-8">
                     <div className="font-mono-dm mb-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-fuchsia-400/50">
                       <span className="h-px w-4 bg-fuchsia-400/30" />
                       colaboração
@@ -1708,8 +1758,8 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#131316]">
-                    <table className="w-full border-collapse text-left">
+                  <div className="overflow-x-auto overflow-hidden rounded-2xl border border-white/[0.06] bg-[#131316]">
+                    <table className="w-full min-w-[580px] border-collapse text-left">
                       <thead>
                         <tr className="border-b border-white/[0.05]">
                           {["Membro", "Função", "Status", ""].map((h) => (
