@@ -32,7 +32,7 @@ const Sidebar = ({
         .sidebar-btn { transition: background 0.15s, color 0.15s; }
       `}</style>
 
-      <aside className="font-syne flex h-screen w-56 shrink-0 flex-col border-r border-white/[0.05] bg-[#0d0d0f]">
+      <aside className="font-syne hidden h-screen w-56 shrink-0 flex-col border-r border-white/[0.05] bg-[#0d0d0f] md:flex">
         {/* ── LOGO ── */}
         <div className="flex items-center gap-2.5 px-5 py-6">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4a044e]">
