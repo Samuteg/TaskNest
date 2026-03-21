@@ -10,7 +10,10 @@ import {
   extractMentionEmails,
 } from "../lib/collaboration.js";
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const runSafeCollaborationOperation = async (action) => {
@@ -25,7 +28,9 @@ const runSafeCollaborationOperation = async (action) => {
 const findTaskFromProject = async (taskId, projectId) => {
   if (!taskId) return null;
   if (!mongoose.isValidObjectId(taskId)) return null;
-  return Task.findOne({ _id: taskId, project: projectId }).select("_id title assignee");
+  return Task.findOne({ _id: taskId, project: projectId }).select(
+    "_id title assignee",
+  );
 };
 
 export const getProjectCollaborationFeed = async (req, res) => {
@@ -44,7 +49,9 @@ export const getProjectCollaborationFeed = async (req, res) => {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     const requesterEmail = normalizeEmail(req.user?.email);
@@ -101,7 +108,9 @@ export const createProjectComment = async (req, res) => {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     if (!content) {
@@ -113,7 +122,9 @@ export const createProjectComment = async (req, res) => {
 
     const relatedTask = await findTaskFromProject(taskId, projectId);
     if (taskId && !relatedTask) {
-      return res.status(400).json({ message: "Tarefa inválida para o comentário." });
+      return res
+        .status(400)
+        .json({ message: "Tarefa inválida para o comentário." });
     }
 
     const mentionEmails = extractMentionEmails(content);
@@ -191,7 +202,9 @@ export const createProjectComment = async (req, res) => {
       );
     }
 
-    const populatedComment = await CollaborationEvent.findById(createdComment._id)
+    const populatedComment = await CollaborationEvent.findById(
+      createdComment._id,
+    )
       .populate("actor", "fullName email")
       .populate("task", "title");
 

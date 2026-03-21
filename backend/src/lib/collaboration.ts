@@ -3,7 +3,10 @@ import CollaborationEvent from "../models/collaborationEvent.model.js";
 
 const mentionEmailRegex = /@([^\s@]+@[^\s@]+\.[^\s@]+)/g;
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 const asObjectId = (value) => {
   if (!value || !mongoose.isValidObjectId(value)) return null;
@@ -139,7 +142,9 @@ export const createMentionNotifications = async ({
     excludeEmails.map((email) => normalizeEmail(String(email))),
   );
 
-  const targetEmails = mentionedEmails.filter((email) => !blockedEmails.has(email));
+  const targetEmails = mentionedEmails.filter(
+    (email) => !blockedEmails.has(email),
+  );
 
   if (!targetEmails.length) return [];
 

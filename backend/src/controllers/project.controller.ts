@@ -14,13 +14,15 @@ export const createProject = async (req, res) => {
     const { name } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: "O nome do projeto é obrigatório." });
+      return res
+        .status(400)
+        .json({ message: "O nome do projeto é obrigatório." });
     }
 
     // req.user vem do seu middleware de autenticação (protectRoute)
     const newProject = new Project({
       name,
-      user: req.user._id, 
+      user: req.user._id,
     });
 
     await newProject.save();
@@ -78,21 +80,22 @@ export const updateProject = async (req, res) => {
     }
 
     if (!normalizedName) {
-      return res.status(400).json({ message: "O nome do projeto é obrigatório." });
+      return res
+        .status(400)
+        .json({ message: "O nome do projeto é obrigatório." });
     }
 
-    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
-      req.user,
-      id,
-      "admin",
-    );
+    const { allowed, project: existingProject } =
+      await canUserAccessProjectWithRole(req.user, id, "admin");
 
     if (!existingProject) {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
 
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     const project = await Project.findByIdAndUpdate(
@@ -120,18 +123,17 @@ export const deleteProject = async (req, res) => {
       return res.status(400).json({ message: "Projeto inválido." });
     }
 
-    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
-      req.user,
-      id,
-      "admin",
-    );
+    const { allowed, project: existingProject } =
+      await canUserAccessProjectWithRole(req.user, id, "admin");
 
     if (!existingProject) {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
 
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     // 1º passo: apaga o projeto após validar permissão de admin no projeto
@@ -147,7 +149,9 @@ export const deleteProject = async (req, res) => {
       TeamInvite.deleteMany({ project: id }),
     ]);
 
-    res.status(200).json({ message: "Projeto e tarefas associadas excluídos com sucesso." });
+    res
+      .status(200)
+      .json({ message: "Projeto e tarefas associadas excluídos com sucesso." });
   } catch (error) {
     console.error("Erro em deleteProject:", error.message);
     res.status(500).json({ message: "Erro interno ao excluir projeto." });

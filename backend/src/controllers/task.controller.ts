@@ -15,7 +15,10 @@ const statusLabelByValue = {
   done: "Concluída",
 };
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 const formatDueDateLabel = (dateValue) => {
   if (!dateValue) return "";
@@ -61,7 +64,10 @@ const parseDueDate = (rawDueDate) => {
   const normalizedInput =
     typeof rawDueDate === "string" ? rawDueDate.trim() : rawDueDate;
 
-  if (typeof normalizedInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(normalizedInput)) {
+  if (
+    typeof normalizedInput === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(normalizedInput)
+  ) {
     const parsedDate = new Date(`${normalizedInput}T12:00:00.000Z`);
     if (Number.isNaN(parsedDate.getTime())) {
       return { error: "Prazo inválido." };
@@ -116,7 +122,9 @@ export const getTasks = async (req, res) => {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     // Usuários com acesso ao projeto veem todas as tarefas do quadro
@@ -136,8 +144,8 @@ export const createTask = async (req, res) => {
     const title = String(req.body?.title || "").trim();
     const description =
       typeof req.body?.description === "string"
-      ? req.body.description.trim()
-      : "";
+        ? req.body.description.trim()
+        : "";
     const project = String(req.body?.project || "");
     const status = String(req.body?.status || "todo");
     const rawPriority = String(req.body?.priority || "medium");
@@ -147,23 +155,24 @@ export const createTask = async (req, res) => {
       typeof req.body?.checklist === "undefined" ? [] : req.body.checklist;
 
     if (!title || !project) {
-      return res.status(400).json({ message: "Título e projeto são obrigatórios." });
+      return res
+        .status(400)
+        .json({ message: "Título e projeto são obrigatórios." });
     }
 
     if (!mongoose.isValidObjectId(project)) {
       return res.status(400).json({ message: "Projeto inválido." });
     }
 
-    const { allowed, project: existingProject } = await canUserAccessProjectWithRole(
-      req.user,
-      project,
-      "editor",
-    );
+    const { allowed, project: existingProject } =
+      await canUserAccessProjectWithRole(req.user, project, "editor");
     if (!existingProject) {
       return res.status(404).json({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     if (assignee.length > 120) {
@@ -268,7 +277,9 @@ export const updateTask = async (req, res) => {
       "editor",
     );
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     const updateData: Record<string, any> = {};
@@ -285,7 +296,9 @@ export const updateTask = async (req, res) => {
     if (typeof req.body?.title === "string") {
       const normalizedTitle = req.body.title.trim();
       if (!normalizedTitle) {
-        return res.status(400).json({ message: "Título da tarefa é obrigatório." });
+        return res
+          .status(400)
+          .json({ message: "Título da tarefa é obrigatório." });
       }
       updateData.title = normalizedTitle;
     }
@@ -354,7 +367,9 @@ export const updateTask = async (req, res) => {
     }
 
     if (!Object.keys(updateData).length) {
-      return res.status(400).json({ message: "Nenhum dado válido para atualizar." });
+      return res
+        .status(400)
+        .json({ message: "Nenhum dado válido para atualizar." });
     }
 
     Object.assign(task, updateData);
@@ -392,7 +407,9 @@ export const updateTask = async (req, res) => {
       !areDatesEqual(updateData.dueDate, previousTask.dueDate)
     ) {
       if (updateData.dueDate) {
-        changedParts.push(`prazo para ${formatDueDateLabel(updateData.dueDate)}`);
+        changedParts.push(
+          `prazo para ${formatDueDateLabel(updateData.dueDate)}`,
+        );
       } else {
         changedParts.push("prazo");
       }
@@ -482,7 +499,9 @@ export const deleteTask = async (req, res) => {
       "editor",
     );
     if (!allowed) {
-      return res.status(403).json({ message: "Sem permissão para este projeto." });
+      return res
+        .status(403)
+        .json({ message: "Sem permissão para este projeto." });
     }
 
     const taskTitle = task.title;

@@ -3,8 +3,8 @@ import { ENV } from "./env.js";
 
 const hasCloudinaryConfig = Boolean(
   ENV.CLOUDINARY_CLOUD_NAME &&
-    ENV.CLOUDINARY_API_KEY &&
-    ENV.CLOUDINARY_API_SECRET,
+  ENV.CLOUDINARY_API_KEY &&
+  ENV.CLOUDINARY_API_SECRET,
 );
 
 if (hasCloudinaryConfig) {

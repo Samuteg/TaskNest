@@ -14,7 +14,10 @@ const PASSWORD_MIN_LENGTH = 6;
 const PASSWORD_RESET_DEFAULT_TTL_MINUTES = 15;
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10);
@@ -64,11 +67,15 @@ export const signup = async (req, res) => {
 
   try {
     if (!fullName || !normalizedEmail || !password) {
-      return res.status(400).json({ message: "Todos os campos são obrigatórios." });
+      return res
+        .status(400)
+        .json({ message: "Todos os campos são obrigatórios." });
     }
 
     if (password.length < PASSWORD_MIN_LENGTH) {
-      return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+      return res
+        .status(400)
+        .json({ message: "A senha deve ter pelo menos 6 caracteres." });
     }
 
     if (!emailRegex.test(normalizedEmail)) {
@@ -114,16 +121,20 @@ export const login = async (req, res) => {
   const normalizedEmail = normalizeEmail(req.body?.email);
 
   if (!normalizedEmail || !password) {
-    return res.status(400).json({ message: "E-mail e senha são obrigatórios." });
+    return res
+      .status(400)
+      .json({ message: "E-mail e senha são obrigatórios." });
   }
 
   try {
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(400).json({ message: "Credenciais inválidas." });
+    if (!user)
+      return res.status(400).json({ message: "Credenciais inválidas." });
     // never tell the client which one is incorrect: password or email
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) return res.status(400).json({ message: "Credenciais inválidas." });
+    if (!isPasswordCorrect)
+      return res.status(400).json({ message: "Credenciais inválidas." });
 
     generateToken(user._id, res);
 
@@ -157,10 +168,15 @@ export const forgotPassword = async (req, res) => {
     }
 
     const { plainToken, hashedToken } = buildPasswordResetToken();
-    const resetUrl = buildPasswordResetUrl({ email: user.email, token: plainToken });
+    const resetUrl = buildPasswordResetUrl({
+      email: user.email,
+      token: plainToken,
+    });
 
     user.passwordResetTokenHash = hashedToken;
-    user.passwordResetExpiresAt = new Date(Date.now() + getPasswordResetTokenTtlMs());
+    user.passwordResetExpiresAt = new Date(
+      Date.now() + getPasswordResetTokenTtlMs(),
+    );
     await user.save();
 
     const emailResult = await sendPasswordResetEmail({
@@ -202,7 +218,9 @@ export const resetPassword = async (req, res) => {
   }
 
   if (newPassword.length < PASSWORD_MIN_LENGTH) {
-    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return res
+      .status(400)
+      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
@@ -240,7 +258,9 @@ export const changePassword = async (req, res) => {
   }
 
   if (newPassword.length < PASSWORD_MIN_LENGTH) {
-    return res.status(400).json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return res
+      .status(400)
+      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
@@ -296,7 +316,9 @@ export const updateProfile = async (req, res) => {
       const normalizedFullName = fullName.trim();
 
       if (!normalizedFullName) {
-        return res.status(400).json({ message: "Nome completo é obrigatório." });
+        return res
+          .status(400)
+          .json({ message: "Nome completo é obrigatório." });
       }
 
       updateData.fullName = normalizedFullName;
@@ -309,10 +331,14 @@ export const updateProfile = async (req, res) => {
         try {
           const parsedUrl = new URL(normalizedProfilePic);
           if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-            return res.status(400).json({ message: "URL da foto de perfil inválida." });
+            return res
+              .status(400)
+              .json({ message: "URL da foto de perfil inválida." });
           }
         } catch {
-          return res.status(400).json({ message: "URL da foto de perfil inválida." });
+          return res
+            .status(400)
+            .json({ message: "URL da foto de perfil inválida." });
         }
       }
 
@@ -320,7 +346,9 @@ export const updateProfile = async (req, res) => {
     }
 
     if (!Object.keys(updateData).length) {
-      return res.status(400).json({ message: "Nenhum dado válido para atualizar." });
+      return res
+        .status(400)
+        .json({ message: "Nenhum dado válido para atualizar." });
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
@@ -342,7 +370,9 @@ export const uploadProfilePicture = async (req, res) => {
     }
 
     if (!req.file?.buffer) {
-      return res.status(400).json({ message: "Selecione uma imagem para enviar." });
+      return res
+        .status(400)
+        .json({ message: "Selecione uma imagem para enviar." });
     }
 
     const userId = req.user._id.toString();

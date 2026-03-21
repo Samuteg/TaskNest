@@ -17,7 +17,10 @@ const roleLabelByValue = {
   admin: "Admin",
 };
 
-const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeEmail = (email) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
 
 const runSafeCollaborationOperation = async (action) => {
   try {
@@ -64,7 +67,9 @@ export const listReceivedTeamInvites = async (req, res) => {
     res.status(200).json(invites);
   } catch (error) {
     console.error("Erro em listReceivedTeamInvites:", error.message);
-    res.status(500).json({ message: "Erro interno ao listar convites recebidos." });
+    res
+      .status(500)
+      .json({ message: "Erro interno ao listar convites recebidos." });
   }
 };
 
@@ -81,7 +86,9 @@ export const createTeamInvite = async (req, res) => {
     }
 
     if (normalizedEmail === req.user.email.toLowerCase()) {
-      return res.status(400).json({ message: "Você não pode convidar a si mesmo." });
+      return res
+        .status(400)
+        .json({ message: "Você não pode convidar a si mesmo." });
     }
 
     if (!mongoose.isValidObjectId(projectId)) {
@@ -233,10 +240,10 @@ export const cancelTeamInvite = async (req, res) => {
       return res.status(400).json({ message: "ID de convite inválido." });
     }
 
-    const invite = await TeamInvite.findOne({ _id: id, project: { $ne: null } }).populate(
-      "project",
-      "name",
-    );
+    const invite = await TeamInvite.findOne({
+      _id: id,
+      project: { $ne: null },
+    }).populate("project", "name");
 
     if (!invite) {
       return res.status(404).json({ message: "Convite não encontrado." });
@@ -295,13 +302,17 @@ export const cancelTeamInvite = async (req, res) => {
         }),
       );
 
-      return res.status(200).json({ message: "Membro removido do projeto com sucesso." });
+      return res
+        .status(200)
+        .json({ message: "Membro removido do projeto com sucesso." });
     }
 
     await invite.deleteOne();
 
     const activityAction =
-      previousStatus === "declined" ? "team.invite.record.removed" : "team.invite.canceled";
+      previousStatus === "declined"
+        ? "team.invite.record.removed"
+        : "team.invite.canceled";
     const activityContent =
       previousStatus === "declined"
         ? `${actorName} removeu o registro de convite recusado de ${inviteEmail} em "${projectName}".`
@@ -335,7 +346,9 @@ export const cancelTeamInvite = async (req, res) => {
     }
 
     if (previousStatus === "declined") {
-      return res.status(200).json({ message: "Registro de convite removido com sucesso." });
+      return res
+        .status(200)
+        .json({ message: "Registro de convite removido com sucesso." });
     }
 
     res.status(200).json({ message: "Convite cancelado com sucesso." });
@@ -381,7 +394,8 @@ export const respondToTeamInvite = async (req, res) => {
 
     if (invite.status === "accepted") {
       return res.status(400).json({
-        message: "Este convite já foi aceito. Peça a um admin para remover você do projeto.",
+        message:
+          "Este convite já foi aceito. Peça a um admin para remover você do projeto.",
       });
     }
 
@@ -413,7 +427,11 @@ export const respondToTeamInvite = async (req, res) => {
     );
 
     const inviterEmail = normalizeEmail((invite.invitedBy as any)?.email);
-    if (inviterEmail && emailRegex.test(inviterEmail) && inviterEmail !== normalizedEmail) {
+    if (
+      inviterEmail &&
+      emailRegex.test(inviterEmail) &&
+      inviterEmail !== normalizedEmail
+    ) {
       await runSafeCollaborationOperation(() =>
         createNotificationEvent({
           projectId,

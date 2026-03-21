@@ -294,11 +294,10 @@ export default function LandingPage() {
                             {tasks.map((t) => (
                               <div
                                 key={t}
-                                className={`rounded-lg border px-2.5 py-2 text-[10px] font-medium ${
-                                  active
+                                className={`rounded-lg border px-2.5 py-2 text-[10px] font-medium ${active
                                     ? "border-[#4a044e]/20 bg-[#4a044e]/5 text-white/70"
                                     : "border-white/[0.06] bg-white/[0.03] text-white/40"
-                                }`}
+                                  }`}
                               >
                                 {t}
                               </div>
