@@ -11,7 +11,7 @@ import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 
 const app = fastify();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT || 5000);
 const allowedOrigins = [ENV.FRONTEND_URL, "http://localhost:3000"]
   .filter(Boolean)
   .map((url) => url.replace(/\/+$/, ""));
@@ -25,7 +25,7 @@ await app.register(cors, {
       return;
     }
 
-    callback(new Error("Not allowed by CORS"));
+    callback(new Error("Not allowed by CORS"), false);
   },
   credentials: true,
 });
@@ -47,18 +47,10 @@ app.get("/", async (request, reply) => {
 const startServer = async () => {
   try {
     await connectDB();
-    await app.listen({ port: PORT, host: "0.0.0.0" });
+    await app.listen(PORT, "0.0.0.0");
     console.log("server running on port " + PORT);
   } catch (error) {
     console.error(error);
-    process.exit(1);
-  }
-};
-
-startServer();
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error);
     process.exit(1);
   }
 };

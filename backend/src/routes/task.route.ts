@@ -1,3 +1,4 @@
+import type { FastifyPluginAsync } from "fastify";
 import {
   getTasks,
   createTask,
@@ -5,10 +6,13 @@ import {
   deleteTask,
 } from "../controllers/task.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
+import { adaptExpressHandler } from "../lib/expressAdapter.js";
 
-export default async function taskRoutes(fastify, options) {
-  fastify.get("/:projectId", { preHandler: protectRoute }, getTasks);
-  fastify.post("/", { preHandler: protectRoute }, createTask);
-  fastify.put("/:id", { preHandler: protectRoute }, updateTask);
-  fastify.delete("/:id", { preHandler: protectRoute }, deleteTask);
-}
+const taskRoutes: FastifyPluginAsync = async (fastify, options) => {
+  fastify.get("/:projectId", { preHandler: protectRoute }, adaptExpressHandler(getTasks));
+  fastify.post("/", { preHandler: protectRoute }, adaptExpressHandler(createTask));
+  fastify.put("/:id", { preHandler: protectRoute }, adaptExpressHandler(updateTask));
+  fastify.delete("/:id", { preHandler: protectRoute }, adaptExpressHandler(deleteTask));
+};
+
+export default taskRoutes;

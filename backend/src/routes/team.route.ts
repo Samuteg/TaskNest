@@ -1,4 +1,4 @@
-import express from "express";
+import type { FastifyPluginAsync } from "fastify";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import {
   cancelTeamInvite,
@@ -7,14 +7,16 @@ import {
   listTeamInvites,
   respondToTeamInvite,
 } from "../controllers/team.controller.js";
+import { adaptExpressHandler } from "../lib/expressAdapter.js";
 
-const router = express.Router();
+const teamRoutes: FastifyPluginAsync = async (fastify, options) => {
+  fastify.addHook("preHandler", protectRoute);
 
-router.use(protectRoute);
-router.get("/invites", listTeamInvites);
-router.get("/invites/received", listReceivedTeamInvites);
-router.post("/invites", createTeamInvite);
-router.patch("/invites/:id/status", respondToTeamInvite);
-router.delete("/invites/:id", cancelTeamInvite);
+  fastify.get("/invites", adaptExpressHandler(listTeamInvites));
+  fastify.get("/invites/received", adaptExpressHandler(listReceivedTeamInvites));
+  fastify.post("/invites", adaptExpressHandler(createTeamInvite));
+  fastify.patch("/invites/:id/status", adaptExpressHandler(respondToTeamInvite));
+  fastify.delete("/invites/:id", adaptExpressHandler(cancelTeamInvite));
+};
 
-export default router;
+export default teamRoutes;
