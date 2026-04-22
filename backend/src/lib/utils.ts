@@ -24,7 +24,7 @@ export const getAuthCookieOptions = (): CookieOptions => {
   };
 };
 
-export const generateToken = (userId, res) => {
+export const generateToken = (userId, reply) => {
   const { JWT_SECRET } = ENV;
   if (!JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
@@ -33,7 +33,7 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
-  res.cookie("jwt", token, {
+  reply.setCookie("jwt", token, {
     ...getAuthCookieOptions(),
     maxAge: AUTH_COOKIE_MAX_AGE_MS, // 7 days
   });

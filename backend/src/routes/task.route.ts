@@ -1,4 +1,3 @@
-import express from "express";
 import {
   getTasks,
   createTask,
@@ -7,11 +6,9 @@ import {
 } from "../controllers/task.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 
-const router = express.Router();
-
-router.get("/:projectId", protectRoute, getTasks);
-router.post("/", protectRoute, createTask);
-router.put("/:id", protectRoute, updateTask);
-router.delete("/:id", protectRoute, deleteTask);
-
-export default router;
+export default async function taskRoutes(fastify, options) {
+  fastify.get("/:projectId", { preHandler: protectRoute }, getTasks);
+  fastify.post("/", { preHandler: protectRoute }, createTask);
+  fastify.put("/:id", { preHandler: protectRoute }, updateTask);
+  fastify.delete("/:id", { preHandler: protectRoute }, deleteTask);
+}

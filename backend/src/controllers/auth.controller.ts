@@ -61,29 +61,29 @@ const buildPasswordResetUrl = ({ email, token }) => {
 const forgotPasswordGenericMessage =
   "Se o e-mail estiver cadastrado, enviaremos instruções para redefinir a senha.";
 
-export const signup = async (req, res) => {
-  const { fullName, password } = req.body;
-  const normalizedEmail = normalizeEmail(req.body?.email);
+export const signup = async (request, reply) => {
+  const { fullName, password } = request.body;
+  const normalizedEmail = normalizeEmail(request.body?.email);
 
   try {
     if (!fullName || !normalizedEmail || !password) {
-      return res
-        .status(400)
-        .json({ message: "Todos os campos são obrigatórios." });
+      return reply
+        .code(400)
+        .send({ message: "Todos os campos são obrigatórios." });
     }
 
     if (password.length < PASSWORD_MIN_LENGTH) {
-      return res
-        .status(400)
-        .json({ message: "A senha deve ter pelo menos 6 caracteres." });
+      return reply
+        .code(400)
+        .send({ message: "A senha deve ter pelo menos 6 caracteres." });
     }
 
     if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({ message: "Formato de e-mail inválido." });
+      return reply.code(400).send({ message: "Formato de e-mail inválido." });
     }
 
     const user = await User.findOne({ email: normalizedEmail });
-    if (user) return res.status(400).json({ message: "E-mail já cadastrado." });
+    if (user) return reply.code(400).send({ message: "E-mail já cadastrado." });
 
     const newUser = new User({
       fullName,
@@ -92,53 +92,47 @@ export const signup = async (req, res) => {
     });
 
     if (newUser) {
-      // before CR:
-      // generateToken(newUser._id, res);
-      // await newUser.save();
-
-      // after CR:
       // Persist user first, then issue auth cookie
       const savedUser = await newUser.save();
-      generateToken(savedUser._id, res);
+      generateToken(savedUser._id, reply);
 
-      res.status(201).json({
+      reply.code(201).send({
         _id: newUser._id,
         fullName: newUser.fullName,
         email: newUser.email,
         profilePic: newUser.profilePic,
       });
     } else {
-      res.status(400).json({ message: "Dados de usuário inválidos." });
+      reply.code(400).send({ message: "Dados de usuário inválidos." });
     }
   } catch (error) {
     console.log("Error in signup controller:", error);
-    res.status(500).json({ message: "Erro interno do servidor." });
+    reply.code(500).send({ message: "Erro interno do servidor." });
   }
 };
 
-export const login = async (req, res) => {
-  const { password } = req.body;
-  const normalizedEmail = normalizeEmail(req.body?.email);
+export const login = async (request, reply) => {
+  const { password } = request.body;
+  const normalizedEmail = normalizeEmail(request.body?.email);
 
   if (!normalizedEmail || !password) {
-    return res
-      .status(400)
-      .json({ message: "E-mail e senha são obrigatórios." });
+    return reply
+      .code(400)
+      .send({ message: "E-mail e senha são obrigatórios." });
   }
 
   try {
     const user = await User.findOne({ email: normalizedEmail });
     if (!user)
-      return res.status(400).json({ message: "Credenciais inválidas." });
-    // never tell the client which one is incorrect: password or email
+      return reply.code(400).send({ message: "Credenciais inválidas." });
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect)
-      return res.status(400).json({ message: "Credenciais inválidas." });
+      return reply.code(400).send({ message: "Credenciais inválidas." });
 
-    generateToken(user._id, res);
+    generateToken(user._id, reply);
 
-    res.status(200).json({
+    reply.send({
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
@@ -146,25 +140,25 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in login controller:", error);
-    res.status(500).json({ message: "Erro interno do servidor." });
+    reply.code(500).send({ message: "Erro interno do servidor." });
   }
 };
 
-export const forgotPassword = async (req, res) => {
-  const normalizedEmail = normalizeEmail(req.body?.email);
+export const forgotPassword = async (request, reply) => {
+  const normalizedEmail = normalizeEmail(request.body?.email);
   if (!normalizedEmail) {
-    return res.status(400).json({ message: "E-mail é obrigatório." });
+    return reply.code(400).send({ message: "E-mail é obrigatório." });
   }
 
   if (!emailRegex.test(normalizedEmail)) {
-    return res.status(400).json({ message: "Formato de e-mail inválido." });
+    return reply.code(400).send({ message: "Formato de e-mail inválido." });
   }
 
   try {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return res.status(200).json({ message: forgotPasswordGenericMessage });
+      return reply.send({ message: forgotPasswordGenericMessage });
     }
 
     const { plainToken, hashedToken } = buildPasswordResetToken();
@@ -195,32 +189,32 @@ export const forgotPassword = async (req, res) => {
       responsePayload.devEmailStatus = emailResult.sent ? "sent" : "not-sent";
     }
 
-    res.status(200).json(responsePayload);
+    reply.send(responsePayload);
   } catch (error) {
     console.error("Error in forgotPassword controller:", error);
-    res.status(500).json({ message: "Erro interno do servidor." });
+    reply.code(500).send({ message: "Erro interno do servidor." });
   }
 };
 
-export const resetPassword = async (req, res) => {
-  const normalizedEmail = normalizeEmail(req.body?.email);
-  const token = String(req.body?.token || "").trim();
-  const newPassword = String(req.body?.newPassword || "");
+export const resetPassword = async (request, reply) => {
+  const normalizedEmail = normalizeEmail(request.body?.email);
+  const token = String(request.body?.token || "").trim();
+  const newPassword = String(request.body?.newPassword || "");
 
   if (!normalizedEmail || !token || !newPassword) {
-    return res
-      .status(400)
-      .json({ message: "E-mail, token e nova senha são obrigatórios." });
+    return reply
+      .code(400)
+      .send({ message: "E-mail, token e nova senha são obrigatórios." });
   }
 
   if (!emailRegex.test(normalizedEmail)) {
-    return res.status(400).json({ message: "Formato de e-mail inválido." });
+    return reply.code(400).send({ message: "Formato de e-mail inválido." });
   }
 
   if (newPassword.length < PASSWORD_MIN_LENGTH) {
-    return res
-      .status(400)
-      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return reply
+      .code(400)
+      .send({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
@@ -232,7 +226,7 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Token inválido ou expirado." });
+      return reply.code(400).send({ message: "Token inválido ou expirado." });
     }
 
     user.password = await hashPassword(newPassword);
@@ -240,33 +234,33 @@ export const resetPassword = async (req, res) => {
     user.passwordResetExpiresAt = null;
     await user.save();
 
-    res.status(200).json({ message: "Senha redefinida com sucesso." });
+    reply.send({ message: "Senha redefinida com sucesso." });
   } catch (error) {
     console.error("Error in resetPassword controller:", error);
-    res.status(500).json({ message: "Erro interno do servidor." });
+    reply.code(500).send({ message: "Erro interno do servidor." });
   }
 };
 
-export const changePassword = async (req, res) => {
-  const currentPassword = String(req.body?.currentPassword || "");
-  const newPassword = String(req.body?.newPassword || "");
+export const changePassword = async (request, reply) => {
+  const currentPassword = String(request.body?.currentPassword || "");
+  const newPassword = String(request.body?.newPassword || "");
 
   if (!currentPassword || !newPassword) {
-    return res
-      .status(400)
-      .json({ message: "Senha atual e nova senha são obrigatórias." });
+    return reply
+      .code(400)
+      .send({ message: "Senha atual e nova senha são obrigatórias." });
   }
 
   if (newPassword.length < PASSWORD_MIN_LENGTH) {
-    return res
-      .status(400)
-      .json({ message: "A senha deve ter pelo menos 6 caracteres." });
+    return reply
+      .code(400)
+      .send({ message: "A senha deve ter pelo menos 6 caracteres." });
   }
 
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(request.user._id);
     if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado." });
+      return reply.code(404).send({ message: "Usuário não encontrado." });
     }
 
     const isCurrentPasswordCorrect = await bcrypt.compare(
@@ -275,14 +269,14 @@ export const changePassword = async (req, res) => {
     );
 
     if (!isCurrentPasswordCorrect) {
-      return res.status(400).json({ message: "Senha atual incorreta." });
+      return reply.code(400).send({ message: "Senha atual incorreta." });
     }
 
     const isSamePassword = await bcrypt.compare(newPassword, user.password);
     if (isSamePassword) {
-      return res
-        .status(400)
-        .json({ message: "A nova senha deve ser diferente da senha atual." });
+      return reply
+        .code(400)
+        .send({ message: "A nova senha deve ser diferente da senha atual." });
     }
 
     user.password = await hashPassword(newPassword);
@@ -290,35 +284,33 @@ export const changePassword = async (req, res) => {
     user.passwordResetExpiresAt = null;
     await user.save();
 
-    res.status(200).json({ message: "Senha alterada com sucesso." });
+    reply.send({ message: "Senha alterada com sucesso." });
   } catch (error) {
     console.error("Error in changePassword controller:", error);
-    res.status(500).json({ message: "Erro interno do servidor." });
+    reply.code(500).send({ message: "Erro interno do servidor." });
   }
 };
 
-export const logout = (_, res) => {
-  res.cookie("jwt", "", {
-    maxAge: 0,
+export const logout = (request, reply) => {
+  reply.clearCookie("jwt", {
     ...getAuthCookieOptions(),
   });
-  res.status(200).json({ message: "Logout realizado com sucesso." });
+  reply.send({ message: "Logout realizado com sucesso." });
 };
 
-// No Controller (auth.controller.js)
-export const updateProfile = async (req, res) => {
+export const updateProfile = async (request, reply) => {
   try {
-    const { fullName, profilePic } = req.body;
-    const userId = req.user._id;
+    const { fullName, profilePic } = request.body;
+    const userId = request.user._id;
     const updateData: Record<string, string> = {};
 
     if (typeof fullName === "string") {
       const normalizedFullName = fullName.trim();
 
       if (!normalizedFullName) {
-        return res
-          .status(400)
-          .json({ message: "Nome completo é obrigatório." });
+        return reply
+          .code(400)
+          .send({ message: "Nome completo é obrigatório." });
       }
 
       updateData.fullName = normalizedFullName;
@@ -331,14 +323,14 @@ export const updateProfile = async (req, res) => {
         try {
           const parsedUrl = new URL(normalizedProfilePic);
           if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-            return res
-              .status(400)
-              .json({ message: "URL da foto de perfil inválida." });
+            return reply
+              .code(400)
+              .send({ message: "URL da foto de perfil inválida." });
           }
         } catch {
-          return res
-            .status(400)
-            .json({ message: "URL da foto de perfil inválida." });
+          return reply
+            .code(400)
+            .send({ message: "URL da foto de perfil inválida." });
         }
       }
 
@@ -346,52 +338,52 @@ export const updateProfile = async (req, res) => {
     }
 
     if (!Object.keys(updateData).length) {
-      return res
-        .status(400)
-        .json({ message: "Nenhum dado válido para atualizar." });
+      return reply
+        .code(400)
+        .send({ message: "Nenhum dado válido para atualizar." });
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
     }).select("-password");
 
-    res.status(200).json(updatedUser);
+    reply.send(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Erro ao atualizar perfil." });
+    reply.code(500).send({ message: "Erro ao atualizar perfil." });
   }
 };
 
-export const uploadProfilePicture = async (req, res) => {
+export const uploadProfilePicture = async (request, reply) => {
   try {
     if (!isCloudinaryConfigured()) {
-      return res.status(503).json({
+      return reply.code(503).send({
         message: "Cloudinary não configurado no servidor.",
       });
     }
 
-    if (!req.file?.buffer) {
-      return res
-        .status(400)
-        .json({ message: "Selecione uma imagem para enviar." });
+    if (!request.fileBuffer) {
+      return reply
+        .code(400)
+        .send({ message: "Selecione uma imagem para enviar." });
     }
 
-    const userId = req.user._id.toString();
+    const userId = request.user._id.toString();
     const uploadResult = (await uploadProfileImageToCloudinary(
-      req.file.buffer,
+      request.fileBuffer,
       userId,
     )) as { secure_url: string };
     const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
+      request.user._id,
       { profilePic: uploadResult.secure_url },
       { new: true },
     ).select("-password");
 
-    res.status(200).json({
+    reply.send({
       profilePic: updatedUser?.profilePic || "",
       user: updatedUser,
     });
   } catch (error) {
     console.error("Error in uploadProfilePicture controller:", error);
-    res.status(500).json({ message: "Erro ao enviar imagem de perfil." });
+    reply.code(500).send({ message: "Erro ao enviar imagem de perfil." });
   }
 };

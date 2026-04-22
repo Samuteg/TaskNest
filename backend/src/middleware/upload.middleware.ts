@@ -1,5 +1,3 @@
-import multer from "multer";
-
 const MAX_FILE_SIZE_MB = 5;
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -8,33 +6,30 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/gif",
 ]);
 
-const uploader = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_FILE_SIZE_MB * 1024 * 1024 },
-  fileFilter: (_, file, cb) => {
-    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
-      cb(new Error("Formato inválido. Envie JPG, PNG, WEBP ou GIF."));
-      return;
-    }
+export const uploadProfileImage = async (request, reply) => {
+  const data = await request.file();
+  if (!data) {
+    reply.code(400).send({ message: "Nenhum arquivo enviado." });
+    return;
+  }
 
-    cb(null, true);
-  },
-});
+  if (data.file.truncated) {
+    reply.code(400).send({ message: `A imagem deve ter no máximo ${MAX_FILE_SIZE_MB}MB.` });
+    return;
+  }
 
-export const uploadProfileImage = (req, res, next) => {
-  uploader.single("profileImage")(req, res, (error) => {
-    if (!error) {
-      next();
-      return;
-    }
+  if (!ALLOWED_MIME_TYPES.has(data.mimetype)) {
+    reply.code(400).send({ message: "Formato inválido. Envie JPG, PNG, WEBP ou GIF." });
+    return;
+  }
 
-    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
-      res
-        .status(400)
-        .json({ message: `A imagem deve ter no máximo ${MAX_FILE_SIZE_MB}MB.` });
-      return;
-    }
+  // Read the stream to buffer
+  const chunks = [];
+  for await (const chunk of data.file) {
+    chunks.push(chunk);
+  }
+  const buffer = Buffer.concat(chunks);
 
-    res.status(400).json({ message: error.message || "Arquivo inválido." });
-  });
+  // Store the buffer in request
+  request.fileBuffer = buffer;
 };

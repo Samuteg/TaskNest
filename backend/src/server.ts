@@ -1,6 +1,7 @@
-import express from "express";
-import cors from "cors";
-import cookieParser from "cookie-parser";
+import fastify from "fastify";
+import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
+import multipart from "@fastify/multipart";
 import authRoutes from "./routes/auth.route.js";
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
@@ -9,45 +10,52 @@ import collaborationRoutes from "./routes/collaboration.route.js";
 import { connectDB } from "./lib/db.js";
 import { ENV } from "./lib/env.js";
 
-const app = express();
+const app = fastify();
 const PORT = process.env.PORT || 5000;
 const allowedOrigins = [ENV.FRONTEND_URL, "http://localhost:3000"]
   .filter(Boolean)
   .map((url) => url.replace(/\/+$/, ""));
 
-app.use(express.json());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const normalizedOrigin = origin ? origin.replace(/\/+$/, "") : origin;
+await app.register(cors, {
+  origin: (origin, callback) => {
+    const normalizedOrigin = origin ? origin.replace(/\/+$/, "") : origin;
 
-      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
-        callback(null, true);
-        return;
-      }
+    if (!origin || allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+      return;
+    }
 
-      callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  }),
-);
-app.use(cookieParser());
+    callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+});
 
-app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/projects", projectRoutes);
-app.use("/api/team", teamRoutes);
-app.use("/api/collaboration", collaborationRoutes);
+await app.register(cookie);
 
-app.get("/", (req, res) => {
-  res.status(200).json({ status: "ok", service: "TaskNest API" });
+await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB
+
+app.register(authRoutes, { prefix: "/api/auth" });
+app.register(taskRoutes, { prefix: "/api/tasks" });
+app.register(projectRoutes, { prefix: "/api/projects" });
+app.register(teamRoutes, { prefix: "/api/team" });
+app.register(collaborationRoutes, { prefix: "/api/collaboration" });
+
+app.get("/", async (request, reply) => {
+  reply.status(200).send({ status: "ok", service: "TaskNest API" });
 });
 
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log("server running on port " + PORT);
+    await app.listen({ port: PORT, host: "0.0.0.0" });
+    console.log("server running on port " + PORT);
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+};
+
+startServer();
     });
   } catch (error) {
     console.error("Failed to start server:", error);

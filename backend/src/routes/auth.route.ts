@@ -1,4 +1,3 @@
-import express from "express";
 import {
   changePassword,
   forgotPassword,
@@ -12,20 +11,18 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { uploadProfileImage } from "../middleware/upload.middleware.js";
 
-const router = express.Router();
+export default async function authRoutes(fastify, options) {
+  fastify.post("/signup", signup);
+  fastify.post("/login", login);
+  fastify.post("/forgot-password", forgotPassword);
+  fastify.post("/reset-password", resetPassword);
+  fastify.post("/logout", logout);
 
-router.post("/signup", signup);
-router.post("/login", login);
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
-router.post("/logout", logout);
+  fastify.get("/check", { preHandler: protectRoute }, async (request, reply) => {
+    reply.send(request.user);
+  });
 
-router.get("/check", protectRoute, (req, res) => {
-  res.status(200).json(req.user);
-});
-
-router.put("/profile", protectRoute, updateProfile);
-router.put("/change-password", protectRoute, changePassword);
-router.post("/profile/upload", protectRoute, uploadProfileImage, uploadProfilePicture);
-
-export default router;
+  fastify.put("/profile", { preHandler: protectRoute }, updateProfile);
+  fastify.put("/change-password", { preHandler: protectRoute }, changePassword);
+  fastify.post("/profile/upload", { preHandler: [protectRoute, uploadProfileImage] }, uploadProfilePicture);
+}
