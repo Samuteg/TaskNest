@@ -106,25 +106,25 @@ const normalizeChecklist = (rawChecklist) => {
   return { value: normalizedChecklist };
 };
 
-export const getTasks = async (req, res) => {
+export const getTasks = async (request, reply) => {
   try {
-    const { projectId } = req.params;
+    const { projectId } = request.params;
     if (!mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     const { allowed, project } = await canUserAccessProjectWithRole(
-      req.user,
+      request.user,
       projectId,
       "viewer",
     );
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     // Usuários com acesso ao projeto veem todas as tarefas do quadro
@@ -132,67 +132,67 @@ export const getTasks = async (req, res) => {
       project: projectId,
     }).sort({ order: 1, createdAt: -1 });
 
-    res.status(200).json(tasks);
+    reply.send(tasks);
   } catch (error) {
     console.error("Erro ao buscar tarefas:", error.message);
-    res.status(500).json({ message: "Erro ao buscar tarefas." });
+    reply.code(500).send({ message: "Erro ao buscar tarefas." });
   }
 };
 
-export const createTask = async (req, res) => {
+export const createTask = async (request, reply) => {
   try {
-    const title = String(req.body?.title || "").trim();
+    const title = String(request.body?.title || "").trim();
     const description =
-      typeof req.body?.description === "string"
-        ? req.body.description.trim()
+      typeof request.body?.description === "string"
+        ? request.body.description.trim()
         : "";
-    const project = String(req.body?.project || "");
-    const status = String(req.body?.status || "todo");
-    const rawPriority = String(req.body?.priority || "medium");
+    const project = String(request.body?.project || "");
+    const status = String(request.body?.status || "todo");
+    const rawPriority = String(request.body?.priority || "medium");
     const assignee =
-      typeof req.body?.assignee === "string" ? req.body.assignee.trim() : "";
+      typeof request.body?.assignee === "string" ? request.body.assignee.trim() : "";
     const checklistInput =
-      typeof req.body?.checklist === "undefined" ? [] : req.body.checklist;
+      typeof request.body?.checklist === "undefined" ? [] : request.body.checklist;
 
     if (!title || !project) {
-      return res
-        .status(400)
-        .json({ message: "Título e projeto são obrigatórios." });
+      return reply
+        .code(400)
+        .send({ message: "Título e projeto são obrigatórios." });
     }
 
     if (!mongoose.isValidObjectId(project)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     const { allowed, project: existingProject } =
-      await canUserAccessProjectWithRole(req.user, project, "editor");
+      await canUserAccessProjectWithRole(request.user, project, "editor");
     if (!existingProject) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     if (assignee.length > 120) {
-      return res.status(400).json({
+      return reply.code(400).send({
         message: "Responsável deve ter no máximo 120 caracteres.",
       });
     }
 
-    const dueDateResult = parseDueDate(req.body?.dueDate);
+    const dueDateResult = parseDueDate(request.body?.dueDate);
     if (dueDateResult.error) {
-      return res.status(400).json({ message: dueDateResult.error });
+      return reply.code(400).send({ message: dueDateResult.error });
     }
 
     if (!allowedPriorities.has(rawPriority)) {
-      return res.status(400).json({ message: "Prioridade inválida." });
+      return reply.code(400).send({ message: "Prioridade inválida." });
     }
 
     const checklistResult = normalizeChecklist(checklistInput);
     if (checklistResult.error) {
-      return res.status(400).json({ message: checklistResult.error });
+      return reply.code(400).send({ message: checklistResult.error });
     }
 
     const latestTask = await Task.findOne({
