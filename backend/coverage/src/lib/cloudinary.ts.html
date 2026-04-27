@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">29.41% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>5/17</span>
+                <span class='fraction'>0/17</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">22.22% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>2/9</span>
+                <span class='fraction'>0/9</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">31.25% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
@@ -112,24 +112,6 @@
 <a name='L47'></a><a href='#L47'>47</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -138,6 +120,24 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -148,7 +148,7 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -158,13 +158,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { v2 as cloudinary } from "cloudinary";
 import { ENV } from "./env.js";
 &nbsp;
-const hasCloudinaryConfig = Boolean(
+const hasCloudinaryConfig = <span class="cstat-no" title="statement not covered" >Boolean(</span>
   ENV.CLOUDINARY_CLOUD_NAME &amp;&amp;
-<span class="branch-1 cbranch-no" title="branch not covered" >  ENV.CLOUDINARY_API_KEY &amp;&amp;</span>
-<span class="branch-2 cbranch-no" title="branch not covered" >  ENV.CLOUDINARY_API_SECRET,</span>
+  ENV.CLOUDINARY_API_KEY &amp;&amp;
+  ENV.CLOUDINARY_API_SECRET,
 );
 &nbsp;
-<span class="missing-if-branch" title="if path not taken" >I</span>if (hasCloudinaryConfig) {
+<span class="cstat-no" title="statement not covered" >if (hasCloudinaryConfig) {</span>
 <span class="cstat-no" title="statement not covered" >  cloudinary.config({</span>
     cloud_name: ENV.CLOUDINARY_CLOUD_NAME,
     api_key: ENV.CLOUDINARY_API_KEY,
@@ -172,9 +172,9 @@ const hasCloudinaryConfig = Boolean(
   });
 }
 &nbsp;
-export const <span class="fstat-no" title="function not covered" >isCloudinaryConfigured = () =&gt; <span class="cstat-no" title="statement not covered" >h</span>asCloudinaryConfig;</span>
+export const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >isCloudinaryConfigured = () =&gt; <span class="cstat-no" title="statement not covered" >h</span>asCloudinaryConfig;</span></span>
 &nbsp;
-const <span class="fstat-no" title="function not covered" >uploadBuffer = (b</span>uffer, folder) =&gt;
+const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >uploadBuffer = (b</span>uffer, folder) =&gt;</span>
 <span class="cstat-no" title="statement not covered" >  new <span class="fstat-no" title="function not covered" >Promise((r</span>esolve, reject) =&gt; {</span>
     const stream = <span class="cstat-no" title="statement not covered" >cloudinary.uploader.upload_stream(</span>
       {
@@ -194,7 +194,7 @@ const <span class="fstat-no" title="function not covered" >uploadBuffer = (b</sp
 <span class="cstat-no" title="statement not covered" >    stream.end(buffer);</span>
   });
 &nbsp;
-export const uploadProfileImageToCloudinary = <span class="fstat-no" title="function not covered" >async (b</span>uffer, userId) =&gt; {
+export const uploadProfileImageToCloudinary = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async (b</span>uffer, userId) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  if (!hasCloudinaryConfig) {</span>
 <span class="cstat-no" title="statement not covered" >    throw new Error("Cloudinary não configurado no servidor.");</span>
   }
@@ -208,7 +208,7 @@ export const uploadProfileImageToCloudinary = <span class="fstat-no" title="func
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-27T20:17:22.032Z
+                at 2026-04-27T20:21:59.099Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

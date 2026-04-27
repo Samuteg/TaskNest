@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import type { FastifyInstance } from "fastify";
@@ -8,11 +8,11 @@ import Task from "../../src/models/Task.ts";
 import TeamInvite from "../../src/models/teamInvite.model.ts";
 import CollaborationEvent from "../../src/models/collaborationEvent.model.ts";
 
-vi.mock("../src/lib/email.ts", () => ({
+vi.mock("../../src/lib/email.ts", () => ({
   sendPasswordResetEmail: vi.fn(async () => ({ sent: true })),
 }));
 
-vi.mock("../src/lib/cloudinary.ts", () => ({
+vi.mock("../../src/lib/cloudinary.ts", () => ({
   isCloudinaryConfigured: false,
   uploadProfileImageToCloudinary: vi.fn(async () => ({
     secure_url: "https://example.com/avatar.png",
@@ -21,7 +21,6 @@ vi.mock("../src/lib/cloudinary.ts", () => ({
 
 let mongoServer: MongoMemoryServer;
 let app: FastifyInstance;
-let authCookie: string;
 
 const parseAuthCookie = (response: any) => {
   const cookie = response.headers["set-cookie"];
@@ -29,6 +28,9 @@ const parseAuthCookie = (response: any) => {
   if (Array.isArray(cookie)) return cookie[0].split(";")[0];
   return String(cookie).split(";")[0];
 };
+
+const uniqueEmail = (base: string) =>
+  `${base}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
 
 const createUserAndLogin = async (email: string, password: string) => {
   const response = await app.inject({
@@ -44,6 +46,12 @@ const createUserAndLogin = async (email: string, password: string) => {
   expect(response.statusCode).toBe(201);
   const cookie = parseAuthCookie(response);
   return { cookie, user: response.json() };
+};
+
+const createAuthenticatedUser = async () => {
+  const email = uniqueEmail("user");
+  const password = "123456";
+  return createUserAndLogin(email, password);
 };
 
 beforeAll(async () => {
@@ -73,19 +81,15 @@ afterEach(async () => {
   ]);
 });
 
-beforeEach(async () => {
-  const result = await createUserAndLogin("user@example.com", "123456");
-  authCookie = result.cookie;
-});
-
 describe("Auth controller", () => {
   it("should sign up a new user and set an auth cookie", async () => {
+    const email = uniqueEmail("new-user");
     const response = await app.inject({
       method: "POST",
       url: "/api/auth/signup",
       payload: {
         fullName: "New User",
-        email: "new-user@example.com",
+        email,
         password: "123456",
       },
     });
@@ -93,17 +97,19 @@ describe("Auth controller", () => {
     expect(response.statusCode).toBe(201);
     expect(response.headers["set-cookie"]).toBeDefined();
     expect(response.json()).toMatchObject({
-      email: "new-user@example.com",
+      email,
       fullName: "New User",
     });
   });
 
   it("should log in an existing user and allow protected check endpoint", async () => {
+    const { user } = await createAuthenticatedUser();
+
     const loginResponse = await app.inject({
       method: "POST",
       url: "/api/auth/login",
       payload: {
-        email: "user@example.com",
+        email: user.email,
         password: "123456",
       },
     });
@@ -121,14 +127,16 @@ describe("Auth controller", () => {
     });
 
     expect(checkResponse.statusCode).toBe(200);
-    expect(checkResponse.json().email).toBe("user@example.com");
+    expect(checkResponse.json().email).toBe(user.email);
   });
 
   it("should reset the password after forgot-password flow", async () => {
+    const { user } = await createAuthenticatedUser();
+
     const forgotResponse = await app.inject({
       method: "POST",
       url: "/api/auth/forgot-password",
-      payload: { email: "user@example.com" },
+      payload: { email: user.email },
     });
 
     expect(forgotResponse.statusCode).toBe(200);
@@ -140,7 +148,7 @@ describe("Auth controller", () => {
       method: "POST",
       url: "/api/auth/reset-password",
       payload: {
-        email: "user@example.com",
+        email: user.email,
         token: body.devResetToken,
         newPassword: "new-password",
       },
@@ -153,7 +161,7 @@ describe("Auth controller", () => {
       method: "POST",
       url: "/api/auth/login",
       payload: {
-        email: "user@example.com",
+        email: user.email,
         password: "new-password",
       },
     });
@@ -162,10 +170,12 @@ describe("Auth controller", () => {
   });
 
   it("should change the password for an authenticated user", async () => {
+    const { cookie, user } = await createAuthenticatedUser();
+
     const response = await app.inject({
       method: "PUT",
       url: "/api/auth/change-password",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: {
         currentPassword: "123456",
         newPassword: "updated-password",
@@ -179,7 +189,7 @@ describe("Auth controller", () => {
       method: "POST",
       url: "/api/auth/login",
       payload: {
-        email: "user@example.com",
+        email: user.email,
         password: "updated-password",
       },
     });
@@ -190,10 +200,12 @@ describe("Auth controller", () => {
 
 describe("Project controller", () => {
   it("should create, list, update, and delete a project", async () => {
+    const { cookie } = await createAuthenticatedUser();
+
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/projects",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { name: "My Project" },
     });
 
@@ -204,7 +216,7 @@ describe("Project controller", () => {
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/projects",
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(listResponse.statusCode).toBe(200);
@@ -213,7 +225,7 @@ describe("Project controller", () => {
     const updateResponse = await app.inject({
       method: "PUT",
       url: `/api/projects/${project._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { name: "Updated Project" },
     });
 
@@ -223,7 +235,7 @@ describe("Project controller", () => {
     const deleteResponse = await app.inject({
       method: "DELETE",
       url: `/api/projects/${project._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(deleteResponse.statusCode).toBe(200);
@@ -233,10 +245,12 @@ describe("Project controller", () => {
 
 describe("Task controller", () => {
   it("should create, fetch, update, and delete a task", async () => {
+    const { cookie } = await createAuthenticatedUser();
+
     const projectResponse = await app.inject({
       method: "POST",
       url: "/api/projects",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { name: "Task Project" },
     });
     const project = projectResponse.json();
@@ -244,7 +258,7 @@ describe("Task controller", () => {
     const createResponse = await app.inject({
       method: "POST",
       url: "/api/tasks",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: {
         title: "Task Title",
         project: project._id,
@@ -260,7 +274,7 @@ describe("Task controller", () => {
     const listResponse = await app.inject({
       method: "GET",
       url: `/api/tasks/${project._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(listResponse.statusCode).toBe(200);
@@ -269,7 +283,7 @@ describe("Task controller", () => {
     const updateResponse = await app.inject({
       method: "PUT",
       url: `/api/tasks/${task._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { title: "Updated Task Title" },
     });
 
@@ -279,7 +293,7 @@ describe("Task controller", () => {
     const deleteResponse = await app.inject({
       method: "DELETE",
       url: `/api/tasks/${task._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(deleteResponse.statusCode).toBe(200);
@@ -289,10 +303,13 @@ describe("Task controller", () => {
 
 describe("Team controller", () => {
   it("should manage invites, list received invites, and accept an invitation", async () => {
+    const { cookie } = await createAuthenticatedUser();
+    const inviteeEmail = uniqueEmail("invitee");
+
     const projectResponse = await app.inject({
       method: "POST",
       url: "/api/projects",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { name: "Invite Project" },
     });
     const project = projectResponse.json();
@@ -300,9 +317,9 @@ describe("Team controller", () => {
     const inviteResponse = await app.inject({
       method: "POST",
       url: "/api/team/invites",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: {
-        email: "invitee@example.com",
+        email: inviteeEmail,
         projectId: project._id,
         role: "viewer",
       },
@@ -313,7 +330,7 @@ describe("Team controller", () => {
     const listResponse = await app.inject({
       method: "GET",
       url: "/api/team/invites",
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(listResponse.statusCode).toBe(200);
@@ -322,18 +339,18 @@ describe("Team controller", () => {
     const cancelResponse = await app.inject({
       method: "DELETE",
       url: `/api/team/invites/${inviteResponse.json()._id}`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(cancelResponse.statusCode).toBe(200);
 
-    const invitee = await createUserAndLogin("invitee@example.com", "654321");
+    const invitee = await createUserAndLogin(inviteeEmail, "654321");
     const secondInviteResponse = await app.inject({
       method: "POST",
       url: "/api/team/invites",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: {
-        email: "invitee@example.com",
+        email: inviteeEmail,
         projectId: project._id,
         role: "editor",
       },
@@ -363,10 +380,12 @@ describe("Team controller", () => {
 
 describe("Collaboration controller", () => {
   it("should create comments, load collaboration feed, and mark notifications as read", async () => {
+    const { cookie, user } = await createAuthenticatedUser();
+
     const projectResponse = await app.inject({
       method: "POST",
       url: "/api/projects",
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: { name: "Collab Project" },
     });
     const project = projectResponse.json();
@@ -374,7 +393,7 @@ describe("Collaboration controller", () => {
     const createCommentResponse = await app.inject({
       method: "POST",
       url: `/api/collaboration/projects/${project._id}/comments`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
       payload: {
         content: "Hello @mention@example.com, this is a test comment.",
       },
@@ -382,19 +401,18 @@ describe("Collaboration controller", () => {
 
     expect(createCommentResponse.statusCode).toBe(201);
 
-    const currentUser = await User.findOne({ email: "user@example.com" });
     const notification = await CollaborationEvent.create({
       project: project._id,
       kind: "notification",
-      audienceEmail: "user@example.com",
-      actor: currentUser?._id,
+      audienceEmail: user.email,
+      actor: user._id,
       content: "A test notification",
     });
 
     const feedResponse = await app.inject({
       method: "GET",
       url: `/api/collaboration/projects/${project._id}/feed`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(feedResponse.statusCode).toBe(200);
@@ -406,7 +424,7 @@ describe("Collaboration controller", () => {
     const markResponse = await app.inject({
       method: "PATCH",
       url: `/api/collaboration/notifications/${notification._id}/read`,
-      headers: { cookie: authCookie },
+      headers: { cookie },
     });
 
     expect(markResponse.statusCode).toBe(200);
