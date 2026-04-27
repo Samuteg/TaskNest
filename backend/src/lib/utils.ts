@@ -1,6 +1,12 @@
 import jwt from "jsonwebtoken";
-import type { CookieOptions } from "express";
 import { ENV } from "./env.js";
+
+type CookieOptions = {
+  httpOnly?: boolean;
+  sameSite?: boolean | "lax" | "none" | "strict";
+  secure?: boolean;
+  maxAge?: number;
+};
 
 const AUTH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 

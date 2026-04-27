@@ -211,18 +211,18 @@ export const createTask = async (request, reply) => {
       assignee,
       checklist: checklistResult.value,
       project,
-      user: req.user._id,
+      user: request.user._id,
       order: nextOrder,
     });
 
     await newTask.save();
 
-    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const actorName = request.user?.fullName || request.user?.email || "Alguém";
     await runSafeCollaborationOperation(() =>
       createActivityEvent({
         projectId: project,
         taskId: newTask._id,
-        actorId: req.user._id,
+        actorId: request.user._id,
         content: `${actorName} criou a tarefa "${newTask.title}".`,
         metadata: {
           action: "task.created",
@@ -231,7 +231,7 @@ export const createTask = async (request, reply) => {
     );
 
     const assigneeEmail = normalizeEmail(newTask.assignee);
-    const requesterEmail = normalizeEmail(req.user?.email);
+    const requesterEmail = normalizeEmail(request.user?.email);
     if (
       assigneeEmail &&
       emailRegex.test(assigneeEmail) &&
@@ -241,7 +241,7 @@ export const createTask = async (request, reply) => {
         createNotificationEvent({
           projectId: project,
           taskId: newTask._id,
-          actorId: req.user._id,
+          actorId: request.user._id,
           audienceEmail: assigneeEmail,
           content: `${actorName} definiu você como responsável em "${newTask.title}".`,
           metadata: {
@@ -251,10 +251,10 @@ export const createTask = async (request, reply) => {
       );
     }
 
-    res.status(201).json(newTask);
+    reply.code(201).send(newTask);
   } catch (error) {
     console.error("Erro ao criar tarefa:", error.message);
-    res.status(500).json({ message: "Erro interno ao criar tarefa." });
+    reply.code(500).send({ message: "Erro interno ao criar tarefa." });
   }
 };
 
