@@ -33,28 +33,28 @@ const findTaskFromProject = async (taskId, projectId) => {
   );
 };
 
-export const getProjectCollaborationFeed = async (req, res) => {
+export const getProjectCollaborationFeed = async (request, reply) => {
   try {
-    const { projectId } = req.params;
+    const { projectId } = request.params;
     if (!mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     const { allowed, project } = await canUserAccessProjectWithRole(
-      req.user,
+      request.user,
       projectId,
       "viewer",
     );
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
-    const requesterEmail = normalizeEmail(req.user?.email);
+    const requesterEmail = normalizeEmail(request.user?.email);
 
     const [comments, activities, notifications] = await Promise.all([
       CollaborationEvent.find({ project: projectId, kind: "comment" })
@@ -78,53 +78,53 @@ export const getProjectCollaborationFeed = async (req, res) => {
         .limit(40),
     ]);
 
-    res.status(200).json({
+    reply.code(200).send({
       comments,
       activities,
       notifications,
     });
   } catch (error) {
     console.error("Erro em getProjectCollaborationFeed:", error.message);
-    res.status(500).json({ message: "Erro interno ao carregar colaboração." });
+    reply.code(500).send({ message: "Erro interno ao carregar colaboração." });
   }
 };
 
-export const createProjectComment = async (req, res) => {
+export const createProjectComment = async (request, reply) => {
   try {
-    const { projectId } = req.params;
-    const content = String(req.body?.content || "").trim();
-    const taskId = req.body?.taskId || null;
+    const { projectId } = request.params;
+    const content = String(request.body?.content || "").trim();
+    const taskId = request.body?.taskId || null;
 
     if (!mongoose.isValidObjectId(projectId)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     const { allowed, project } = await canUserAccessProjectWithRole(
-      req.user,
+      request.user,
       projectId,
       "viewer",
     );
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     if (!content) {
-      return res.status(400).json({ message: "Escreva um comentário." });
+      return reply.code(400).send({ message: "Escreva um comentário." });
     }
     if (content.length > 2000) {
-      return res.status(400).json({ message: "Comentário muito longo." });
+      return reply.code(400).send({ message: "Comentário muito longo." });
     }
 
     const relatedTask = await findTaskFromProject(taskId, projectId);
     if (taskId && !relatedTask) {
-      return res
-        .status(400)
-        .json({ message: "Tarefa inválida para o comentário." });
+      return reply
+        .code(400)
+        .send({ message: "Tarefa inválida para o comentário." });
     }
 
     const mentionEmails = extractMentionEmails(content);
@@ -132,7 +132,7 @@ export const createProjectComment = async (req, res) => {
     const createdComment = await createCommentEvent({
       projectId,
       taskId: relatedTask?._id || null,
-      actorId: req.user._id,
+      actorId: request.user._id,
       content,
       mentions: mentionEmails,
       metadata: {
@@ -141,17 +141,17 @@ export const createProjectComment = async (req, res) => {
     });
 
     if (!createdComment) {
-      return res
-        .status(500)
-        .json({ message: "Não foi possível registrar este comentário." });
+      return reply
+        .code(500)
+        .send({ message: "Não foi possível registrar este comentário." });
     }
 
-    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const actorName = request.user?.fullName || request.user?.email || "Alguém";
     await runSafeCollaborationOperation(() =>
       createActivityEvent({
         projectId,
         taskId: relatedTask?._id || null,
-        actorId: req.user._id,
+        actorId: request.user._id,
         content: relatedTask
           ? `${actorName} comentou na tarefa "${relatedTask.title}".`
           : `${actorName} comentou no projeto.`,
@@ -169,9 +169,9 @@ export const createProjectComment = async (req, res) => {
       createMentionNotifications({
         projectId,
         taskId: relatedTask?._id || null,
-        actorId: req.user._id,
+        actorId: request.user._id,
         content,
-        excludeEmails: [req.user?.email],
+        excludeEmails: [request.user?.email],
         notificationMessage: mentionNotificationMessage,
         metadata: {
           action: "mention.created",
@@ -180,7 +180,7 @@ export const createProjectComment = async (req, res) => {
     );
 
     const normalizedAssignee = normalizeEmail(relatedTask?.assignee);
-    const requesterEmail = normalizeEmail(req.user?.email);
+    const requesterEmail = normalizeEmail(request.user?.email);
 
     if (
       normalizedAssignee &&
@@ -192,7 +192,7 @@ export const createProjectComment = async (req, res) => {
         createNotificationEvent({
           projectId,
           taskId: relatedTask?._id || null,
-          actorId: req.user._id,
+          actorId: request.user._id,
           audienceEmail: normalizedAssignee,
           content: `${actorName} comentou na tarefa "${relatedTask?.title || "sem título"}".`,
           metadata: {
@@ -208,21 +208,21 @@ export const createProjectComment = async (req, res) => {
       .populate("actor", "fullName email")
       .populate("task", "title");
 
-    res.status(201).json(populatedComment);
+    reply.code(201).send(populatedComment);
   } catch (error) {
     console.error("Erro em createProjectComment:", error.message);
-    res.status(500).json({ message: "Erro interno ao criar comentário." });
+    reply.code(500).send({ message: "Erro interno ao criar comentário." });
   }
 };
 
-export const markNotificationAsRead = async (req, res) => {
+export const markNotificationAsRead = async (request, reply) => {
   try {
-    const { notificationId } = req.params;
+    const { notificationId } = request.params;
     if (!mongoose.isValidObjectId(notificationId)) {
-      return res.status(400).json({ message: "Notificação inválida." });
+      return reply.code(400).send({ message: "Notificação inválida." });
     }
 
-    const requesterEmail = normalizeEmail(req.user?.email);
+    const requesterEmail = normalizeEmail(request.user?.email);
 
     const notification = await CollaborationEvent.findOne({
       _id: notificationId,
@@ -233,7 +233,7 @@ export const markNotificationAsRead = async (req, res) => {
       .populate("task", "title");
 
     if (!notification) {
-      return res.status(404).json({ message: "Notificação não encontrada." });
+      return reply.code(404).send({ message: "Notificação não encontrada." });
     }
 
     if (!notification.readAt) {
@@ -241,9 +241,9 @@ export const markNotificationAsRead = async (req, res) => {
       await notification.save();
     }
 
-    res.status(200).json(notification);
+    reply.code(200).send(notification);
   } catch (error) {
     console.error("Erro em markNotificationAsRead:", error.message);
-    res.status(500).json({ message: "Erro interno ao atualizar notificação." });
+    reply.code(500).send({ message: "Erro interno ao atualizar notificação." });
   }
 };

@@ -9,40 +9,40 @@ import {
 } from "../lib/teamAccess.js";
 
 // 1. CRIAR UM PROJETO
-export const createProject = async (req, res) => {
+export const createProject = async (request, reply) => {
   try {
-    const { name } = req.body;
+    const { name } = request.body;
 
     if (!name) {
-      return res
-        .status(400)
-        .json({ message: "O nome do projeto é obrigatório." });
+      return reply
+        .code(400)
+        .send({ message: "O nome do projeto é obrigatório." });
     }
 
-    // req.user vem do seu middleware de autenticação (protectRoute)
+    // request.user vem do seu middleware de autenticação (protectRoute)
     const newProject = new Project({
       name,
-      user: req.user._id,
+      user: request.user._id,
     });
 
     await newProject.save();
-    res.status(201).json(newProject);
+    reply.code(201).send(newProject);
   } catch (error) {
     console.error("Erro em createProject:", error.message);
-    res.status(500).json({ message: "Erro interno ao criar projeto." });
+    reply.code(500).send({ message: "Erro interno ao criar projeto." });
   }
 };
 
 // 2. LISTAR TODOS OS PROJETOS DO USUÁRIO
-export const getProjects = async (req, res) => {
+export const getProjects = async (request, reply) => {
   try {
     const [accessibleProjectIds, accessByProjectId] = await Promise.all([
-      getAccessibleProjectIds(req.user),
-      getProjectAccessMapForUser(req.user),
+      getAccessibleProjectIds(request.user),
+      getProjectAccessMapForUser(request.user),
     ]);
 
     if (!accessibleProjectIds.length) {
-      return res.status(200).json([]);
+      return reply.code(200).send([]);
     }
 
     const projects = await Project.find({
@@ -62,40 +62,40 @@ export const getProjects = async (req, res) => {
       };
     });
 
-    res.status(200).json(projectsWithAccess);
+    reply.code(200).send(projectsWithAccess);
   } catch (error) {
     console.error("Erro em getProjects:", error.message);
-    res.status(500).json({ message: "Erro interno ao buscar projetos." });
+    reply.code(500).send({ message: "Erro interno ao buscar projetos." });
   }
 };
 
 // 3. EDITAR O NOME DO PROJETO
-export const updateProject = async (req, res) => {
+export const updateProject = async (request, reply) => {
   try {
-    const { id } = req.params;
-    const normalizedName = String(req.body?.name || "").trim();
+    const { id } = request.params;
+    const normalizedName = String(request.body?.name || "").trim();
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     if (!normalizedName) {
-      return res
-        .status(400)
-        .json({ message: "O nome do projeto é obrigatório." });
+      return reply
+        .code(400)
+        .send({ message: "O nome do projeto é obrigatório." });
     }
 
     const { allowed, project: existingProject } =
-      await canUserAccessProjectWithRole(req.user, id, "admin");
+      await canUserAccessProjectWithRole(request.user, id, "admin");
 
     if (!existingProject) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
 
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     const project = await Project.findByIdAndUpdate(
@@ -105,42 +105,42 @@ export const updateProject = async (req, res) => {
     );
 
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
 
-    res.status(200).json(project);
+    reply.code(200).send(project);
   } catch (error) {
     console.error("Erro em updateProject:", error.message);
-    res.status(500).json({ message: "Erro interno ao atualizar projeto." });
+    reply.code(500).send({ message: "Erro interno ao atualizar projeto." });
   }
 };
 
 // 4. APAGAR UM PROJETO (E SUAS TAREFAS)
-export const deleteProject = async (req, res) => {
+export const deleteProject = async (request, reply) => {
   try {
-    const { id } = req.params;
+    const { id } = request.params;
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Projeto inválido." });
+      return reply.code(400).send({ message: "Projeto inválido." });
     }
 
     const { allowed, project: existingProject } =
-      await canUserAccessProjectWithRole(req.user, id, "admin");
+      await canUserAccessProjectWithRole(request.user, id, "admin");
 
     if (!existingProject) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
 
     if (!allowed) {
-      return res
-        .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+      return reply
+        .code(403)
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     // 1º passo: apaga o projeto após validar permissão de admin no projeto
     const project = await Project.findByIdAndDelete(id);
 
     if (!project) {
-      return res.status(404).json({ message: "Projeto não encontrado." });
+      return reply.code(404).send({ message: "Projeto não encontrado." });
     }
 
     // 2º passo: Apaga todas as tarefas que pertenciam a este projeto
@@ -149,11 +149,11 @@ export const deleteProject = async (req, res) => {
       TeamInvite.deleteMany({ project: id }),
     ]);
 
-    res
-      .status(200)
-      .json({ message: "Projeto e tarefas associadas excluídos com sucesso." });
+    reply
+      .code(200)
+      .send({ message: "Projeto e tarefas associadas excluídos com sucesso." });
   } catch (error) {
     console.error("Erro em deleteProject:", error.message);
-    res.status(500).json({ message: "Erro interno ao excluir projeto." });
+    reply.code(500).send({ message: "Erro interno ao excluir projeto." });
   }
 };

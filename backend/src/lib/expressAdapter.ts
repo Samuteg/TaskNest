@@ -25,7 +25,7 @@ export const adaptExpressHandler = (handler: (req: ExpressLikeRequest, res: Expr
       query: request.query,
       cookies: request.cookies,
       headers: request.headers,
-      user: request.user,
+      user: (request as any).user,
     };
 
     let statusCode = 200;
