@@ -24,7 +24,7 @@
     "@fastify/swagger-ui": "^4.2.0",
     "@scalar/fastify-api-reference": "^1.57.5",
     "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.8.0",
+    "cloudinary": "^2.10.0",
     "dotenv": "^17.3.1",
     "fastify": "^4.28.1",
     "jsonwebtoken": "^9.0.3",
