@@ -55,7 +55,9 @@ const createAuthenticatedUser = async () => {
 };
 
 beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
+  mongoServer = await MongoMemoryServer.create({
+    instance: { ip: "127.0.0.1" },
+  });
   process.env.MONGO_URI = mongoServer.getUri();
   await mongoose.connect(process.env.MONGO_URI, {
     dbName: "tasknest_test",
@@ -66,9 +68,17 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await app.close();
-  await mongoose.disconnect();
-  await mongoServer.stop();
+  if (app) {
+    await app.close();
+  }
+
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
+
+  if (mongoServer) {
+    await mongoServer.stop();
+  }
 });
 
 afterEach(async () => {
