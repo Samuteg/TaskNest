@@ -1,18 +1,59 @@
-import createApp from "./app.js";
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
+import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
+import multipart from "@fastify/multipart";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import apiReference from "@scalar/fastify-api-reference";
+import { toNodeHandler } from "better-auth/node";
+import { AppModule } from "./nest/app.module.js";
+import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
+import { auth, connectAuthDb } from "./lib/betterAuth.js";
+import { createCorsOriginChecker } from "./lib/cors.js";
 
 const PORT = Number(process.env.PORT || 5000);
-const app = await createApp();
 
-const startServer = async () => {
-  try {
-    await connectDB();
-    await app.listen(PORT, "0.0.0.0");
-    console.log("server running on port " + PORT);
-  } catch (error) {
-    console.error(error);
-    process.exit(1);
-  }
-};
+async function bootstrap() {
+  const adapter = new FastifyAdapter();
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
+    bodyParser: true,
+  });
 
-startServer();
+  const fastify = app.getHttpAdapter().getInstance();
+
+  await fastify.register(cors, {
+    origin: createCorsOriginChecker(),
+    credentials: true,
+  });
+
+  await fastify.register(cookie);
+  await fastify.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+  await fastify.register(swagger, {
+    openapi: {
+      info: { title: "TaskNest API", version: "2.0.0" },
+      servers: [{ url: "/" }],
+    },
+  });
+  await fastify.register(swaggerUi, { routePrefix: "/docs/swagger" });
+  await fastify.register(apiReference, {
+    routePrefix: "/docs",
+    configuration: { spec: { url: "/docs/swagger/json" } },
+  });
+
+  fastify.all("/api/auth/core/*", async (request, reply) => {
+    return toNodeHandler(auth)(request.raw, reply.raw);
+  });
+
+  await connectDB();
+  await connectAuthDb();
+  await app.listen(PORT, "0.0.0.0");
+  console.log("server running on port " + PORT);
+}
+
+bootstrap().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

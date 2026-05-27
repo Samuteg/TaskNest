@@ -1,10 +1,10 @@
-import { generateToken } from "../lib/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { ENV } from "../lib/env.js";
-import { getAuthCookieOptions } from "../lib/utils.js";
 import { sendPasswordResetEmail } from "../lib/email.js";
+import { fromNodeHeaders } from "better-auth/node";
+import { auth } from "../lib/betterAuth.js";
 import {
   isCloudinaryConfigured,
   uploadProfileImageToCloudinary,
@@ -93,8 +93,20 @@ export const signup = async (request, reply) => {
 
     if (newUser) {
       // Persist user first, then issue auth cookie
-      const savedUser = await newUser.save();
-      generateToken(savedUser._id, reply);
+      await newUser.save();
+      const authResponse = await (auth as any).api.signUpEmail({
+        body: {
+          email: normalizedEmail,
+          password,
+          name: fullName,
+        },
+        headers: fromNodeHeaders(request.headers),
+        asResponse: true,
+      });
+      const setCookie = authResponse.headers.get("set-cookie");
+      if (setCookie) {
+        reply.header("set-cookie", setCookie);
+      }
 
       reply.code(201).send({
         _id: newUser._id,
@@ -130,7 +142,18 @@ export const login = async (request, reply) => {
     if (!isPasswordCorrect)
       return reply.code(400).send({ message: "Credenciais inválidas." });
 
-    generateToken(user._id, reply);
+    const authResponse = await (auth as any).api.signInEmail({
+      body: {
+        email: normalizedEmail,
+        password,
+      },
+      headers: fromNodeHeaders(request.headers),
+      asResponse: true,
+    });
+    const setCookie = authResponse.headers.get("set-cookie");
+    if (setCookie) {
+      reply.header("set-cookie", setCookie);
+    }
 
     reply.send({
       _id: user._id,
@@ -292,10 +315,22 @@ export const changePassword = async (request, reply) => {
 };
 
 export const logout = (request, reply) => {
-  reply.clearCookie("jwt", {
-    ...getAuthCookieOptions(),
-  });
-  reply.send({ message: "Logout realizado com sucesso." });
+  Promise.resolve(
+    (auth as any).api.signOut({
+      headers: fromNodeHeaders(request.headers),
+      asResponse: true,
+    }),
+  )
+    .then((authResponse) => {
+      const setCookie = authResponse.headers.get("set-cookie");
+      if (setCookie) {
+        reply.header("set-cookie", setCookie);
+      }
+      reply.send({ message: "Logout realizado com sucesso." });
+    })
+    .catch(() => {
+      reply.send({ message: "Logout realizado com sucesso." });
+    });
 };
 
 export const updateProfile = async (request, reply) => {
