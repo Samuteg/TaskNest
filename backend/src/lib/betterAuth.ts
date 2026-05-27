@@ -14,9 +14,20 @@ export const auth = betterAuth({
     "dev_only_change_me_with_32_chars_min",
   baseURL: ENV.BETTER_AUTH_URL || `http://localhost:${ENV.PORT || "5000"}`,
   basePath: "/api/auth/core",
-  database: mongodbAdapter(mongoDb, { client: mongoClient }),
+  database: mongodbAdapter(mongoDb, {
+    client: mongoClient,
+    transaction: ENV.NODE_ENV === "test" ? false : undefined,
+  }),
   emailAndPassword: {
     enabled: true,
+    minPasswordLength: 6,
+  },
+  advanced: {
+    cookies: {
+      session_token: {
+        name: "jwt",
+      },
+    },
   },
 });
 
