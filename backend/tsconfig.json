@@ -4,6 +4,8 @@
     "lib": ["ES2022", "DOM"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "rootDir": "src",
     "outDir": "dist",
     "esModuleInterop": true,
@@ -13,5 +15,6 @@
     "strict": false,
     "noImplicitAny": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/app.ts", "src/routes/**/*.ts", "src/lib/expressAdapter.ts"]
 }

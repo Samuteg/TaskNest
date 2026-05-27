@@ -10,25 +10,12 @@ import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
 import teamRoutes from "./routes/team.route.js";
 import collaborationRoutes from "./routes/collaboration.route.js";
-import { ENV } from "./lib/env.js";
+import { createCorsOriginChecker } from "./lib/cors.js";
 
 const createApp = async () => {
   const app = fastify();
-  const allowedOrigins = [ENV.FRONTEND_URL, "http://localhost:3000"]
-    .filter(Boolean)
-    .map((url) => url.replace(/\/+$/, ""));
-
   await app.register(cors, {
-    origin: (origin, callback) => {
-      const normalizedOrigin = origin ? origin.replace(/\/+$/, "") : origin;
-
-      if (!origin || allowedOrigins.includes(normalizedOrigin)) {
-        callback(null, true);
-        return;
-      }
-
-      callback(new Error("Not allowed by CORS"), false);
-    },
+    origin: createCorsOriginChecker(),
     credentials: true,
   });
 
@@ -38,7 +25,7 @@ const createApp = async () => {
     openapi: {
       info: {
         title: "TaskNest API",
-        version: "1.0.0",
+        version: "2.0.0",
       },
       servers: [{ url: "/" }],
     },
@@ -64,7 +51,6 @@ const createApp = async () => {
   app.get("/", async (request, reply) => {
     reply.status(200).send({ status: "ok", service: "TaskNest API" });
   });
-
   return app;
 };
 
