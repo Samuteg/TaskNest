@@ -151,22 +151,27 @@ export const updateProfile = async (request, reply) => {
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (Array.isArray(value)) {
-        value.forEach((v) => headers.append(key, v));
+        value.forEach((v) => headers.append(key, v as string));
       } else if (value !== undefined) {
         headers.set(key, value as string);
       }
     }
 
-    const updatedUser = await auth.api.updateUser({
+    await auth.api.updateUser({
       headers,
       body: updateBody,
     });
 
+    const userResponse = await auth.api.getSession({ headers });
+    if (!userResponse?.user) {
+      return reply.code(500).send({ message: "Erro ao atualizar perfil." });
+    }
+
     reply.send({
-      ...updatedUser,
-      _id: updatedUser.id,
-      fullName: updatedUser.name,
-      profilePic: updatedUser.image,
+      _id: userResponse.user.id,
+      email: userResponse.user.email,
+      fullName: userResponse.user.name,
+      profilePic: userResponse.user.image,
     });
   } catch (error) {
     console.error("Error in updateProfile:", error);
@@ -197,26 +202,31 @@ export const uploadProfilePicture = async (request, reply) => {
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (Array.isArray(value)) {
-        value.forEach((v) => headers.append(key, v));
+        value.forEach((v) => headers.append(key, v as string));
       } else if (value !== undefined) {
         headers.set(key, value as string);
       }
     }
 
-    const updatedUser = await auth.api.updateUser({
+    await auth.api.updateUser({
       headers,
       body: {
         image: uploadResult.secure_url,
       },
     });
 
+    const userResponse = await auth.api.getSession({ headers });
+    if (!userResponse?.user) {
+      return reply.code(500).send({ message: "Erro ao enviar imagem de perfil." });
+    }
+
     reply.send({
-      profilePic: updatedUser.image,
+      profilePic: userResponse.user.image,
       user: {
-        ...updatedUser,
-        _id: updatedUser.id,
-        fullName: updatedUser.name,
-        profilePic: updatedUser.image,
+        _id: userResponse.user.id,
+        email: userResponse.user.email,
+        fullName: userResponse.user.name,
+        profilePic: userResponse.user.image,
       },
     });
   } catch (error) {
