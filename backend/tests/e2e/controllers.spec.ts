@@ -21,6 +21,7 @@ vi.mock("../../src/lib/cloudinary.ts", () => ({
 
 let mongoServer: MongoMemoryServer;
 let app: FastifyInstance;
+let nestApp: any;
 
 const parseAuthCookie = (response: any) => {
   const cookie = response.headers["set-cookie"];
@@ -35,17 +36,24 @@ const uniqueEmail = (base: string) =>
 const createUserAndLogin = async (email: string, password: string) => {
   const response = await app.inject({
     method: "POST",
-    url: "/api/auth/signup",
+    url: "/api/auth/core/sign-up/email",
     payload: {
-      fullName: "Test User",
+      name: "Test User",
       email,
       password,
     },
   });
 
-  expect(response.statusCode).toBe(201);
+  expect(response.statusCode).toBe(200);
   const cookie = parseAuthCookie(response);
-  return { cookie, user: response.json() };
+  const body = response.json();
+  const user = body.user ? {
+    ...body.user,
+    fullName: body.user.name,
+    profilePic: body.user.image,
+    _id: body.user.id,
+  } : null;
+  return { cookie, user };
 };
 
 const createAuthenticatedUser = async () => {
@@ -63,12 +71,31 @@ beforeAll(async () => {
     dbName: "tasknest_test",
   });
 
-  const { default: createApp } = await import("../../src/app.ts");
-  app = await createApp();
+  const { NestFactory } = await import("@nestjs/core");
+  const { FastifyAdapter } = await import("@nestjs/platform-fastify");
+  const { AppModule } = await import("../../src/nest/app.module.js");
+  const { auth, connectAuthDb } = await import("../../src/lib/betterAuth.js");
+  const cookie = (await import("@fastify/cookie")).default;
+  const multipart = (await import("@fastify/multipart")).default;
+
+  const adapter = new FastifyAdapter();
+  nestApp = await NestFactory.create(AppModule, adapter, {
+    bodyParser: true,
+  });
+  
+  app = nestApp.getHttpAdapter().getInstance();
+  await app.register(cookie);
+  await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+  
+  await connectAuthDb();
+  await nestApp.init();
+  await nestApp.getHttpAdapter().getInstance().ready();
 });
 
 afterAll(async () => {
-  if (app) {
+  if (nestApp) {
+    await nestApp.close();
+  } else if (app) {
     await app.close();
   }
 
@@ -96,19 +123,19 @@ describe("Auth controller", () => {
     const email = uniqueEmail("new-user");
     const response = await app.inject({
       method: "POST",
-      url: "/api/auth/signup",
+      url: "/api/auth/core/sign-up/email",
       payload: {
-        fullName: "New User",
+        name: "New User",
         email,
         password: "123456",
       },
     });
 
-    expect(response.statusCode).toBe(201);
+    expect(response.statusCode).toBe(200);
     expect(response.headers["set-cookie"]).toBeDefined();
-    expect(response.json()).toMatchObject({
+    expect(response.json().user).toMatchObject({
       email,
-      fullName: "New User",
+      name: "New User",
     });
   });
 
@@ -117,7 +144,7 @@ describe("Auth controller", () => {
 
     const loginResponse = await app.inject({
       method: "POST",
-      url: "/api/auth/login",
+      url: "/api/auth/core/sign-in/email",
       payload: {
         email: user.email,
         password: "123456",
@@ -126,18 +153,18 @@ describe("Auth controller", () => {
 
     expect(loginResponse.statusCode).toBe(200);
     const loginCookie = parseAuthCookie(loginResponse);
-    expect(loginCookie).toContain("jwt=");
+    expect(loginCookie).toContain("better-auth.session_token=");
 
     const checkResponse = await app.inject({
       method: "GET",
-      url: "/api/auth/check",
+      url: "/api/auth/core/get-session",
       headers: {
         cookie: loginCookie,
       },
     });
 
     expect(checkResponse.statusCode).toBe(200);
-    expect(checkResponse.json().email).toBe(user.email);
+    expect(checkResponse.json().user.email).toBe(user.email);
   });
 
   it("should reset the password after forgot-password flow", async () => {
@@ -169,7 +196,7 @@ describe("Auth controller", () => {
 
     const loginResponse = await app.inject({
       method: "POST",
-      url: "/api/auth/login",
+      url: "/api/auth/core/sign-in/email",
       payload: {
         email: user.email,
         password: "new-password",
@@ -197,7 +224,7 @@ describe("Auth controller", () => {
 
     const loginResponse = await app.inject({
       method: "POST",
-      url: "/api/auth/login",
+      url: "/api/auth/core/sign-in/email",
       payload: {
         email: user.email,
         password: "updated-password",

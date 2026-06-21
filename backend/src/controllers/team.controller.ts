@@ -1,5 +1,6 @@
 import TeamInvite from "../models/teamInvite.model.js";
 import mongoose from "mongoose";
+import User from "../models/User.js";
 import {
   canUserAccessProjectWithRole,
   normalizeProjectRole,

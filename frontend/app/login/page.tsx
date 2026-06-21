@@ -28,7 +28,7 @@ export default function LoginPage() {
     setError("");
     setIsLoading(true);
     try {
-      const response = await fetch(apiUrl("/api/auth/login"), {
+      const response = await fetch(apiUrl("/api/auth/core/sign-in/email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
