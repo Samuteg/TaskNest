@@ -12,11 +12,11 @@ import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
 import { auth, connectAuthDb } from "./lib/betterAuth.js";
 import { createCorsOriginChecker } from "./lib/cors.js";
-import "./models/User.ts";
-import "./models/Task.ts";
-import "./models/project.model.ts";
-import "./models/teamInvite.model.ts";
-import "./models/collaborationEvent.model.ts";
+import "./models/User.js";
+import "./models/Task.js";
+import "./models/project.model.js";
+import "./models/teamInvite.model.js";
+import "./models/collaborationEvent.model.js";
 
 const PORT = Number(process.env.PORT || 5000);
 
