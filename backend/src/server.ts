@@ -7,7 +7,6 @@ import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import apiReference from "@scalar/fastify-api-reference";
-import { toNodeHandler } from "better-auth/node";
 import { AppModule } from "./nest/app.module.js";
 import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
@@ -44,7 +43,33 @@ async function bootstrap() {
   });
 
   fastify.all("/api/auth/core/*", async (request, reply) => {
-    return toNodeHandler(auth)(request.raw, reply.raw);
+    const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(request.headers)) {
+      if (Array.isArray(value)) {
+        value.forEach((v) => headers.append(key, v));
+      } else if (value !== undefined) {
+        headers.set(key, value);
+      }
+    }
+    const body =
+      request.method !== "GET" && request.method !== "HEAD" && request.body
+        ? JSON.stringify(request.body)
+        : undefined;
+
+    const req = new Request(url.toString(), {
+      method: request.method,
+      headers,
+      body,
+    });
+
+    const response = await auth.handler(req);
+
+    reply.status(response.status);
+    response.headers.forEach((value, key) => reply.header(key, value));
+
+    const text = await response.text();
+    return reply.send(text || null);
   });
 
   await connectDB();

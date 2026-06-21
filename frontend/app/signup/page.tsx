@@ -16,7 +16,7 @@ import { apiUrl } from "../lib/api";
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
-    fullName: "",
+    name: "",
     email: "",
     password: "",
   });
@@ -29,7 +29,7 @@ export default function SignupPage() {
     setError("");
     setIsLoading(true);
     try {
-      const response = await fetch(apiUrl("/api/auth/signup"), {
+      const response = await fetch(apiUrl("/api/auth/core/sign-up/email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -189,9 +189,9 @@ export default function SignupPage() {
                       type="text"
                       required
                       placeholder="Seu nome"
-                      value={formData.fullName}
+                      value={formData.name}
                       onChange={(e) =>
-                        setFormData({ ...formData, fullName: e.target.value })
+                        setFormData({ ...formData, name: e.target.value })
                       }
                       className={inputClass}
                     />
