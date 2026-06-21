@@ -87,39 +87,6 @@ beforeAll(async () => {
   await app.register(cookie);
   await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
   
-  app.all("/api/auth/core/*", async (request: any, reply: any) => {
-    const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(request.headers)) {
-      if (Array.isArray(value)) {
-        value.forEach((v) => headers.append(key, v));
-      } else if (value !== undefined) {
-        headers.set(key, value as string);
-      }
-    }
-    const body =
-      request.method !== "GET" && request.method !== "HEAD" && request.body
-        ? JSON.stringify(request.body)
-        : undefined;
-
-    const req = new Request(url.toString(), {
-      method: request.method,
-      headers,
-      body,
-    });
-
-    const response = await auth.handler(req);
-
-    console.log("Wildcard hit:", request.method, request.url, "Status:", response.status);
-    const text = await response.text();
-    console.log("Wildcard response text:", text);
-
-    reply.status(response.status);
-    response.headers.forEach((value: string, key: string) => reply.header(key, value));
-
-    return reply.send(text || null);
-  });
-  
   await connectAuthDb();
   await nestApp.init();
   await nestApp.getHttpAdapter().getInstance().ready();

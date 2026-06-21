@@ -7,6 +7,12 @@ const mongoClient = new MongoClient(ENV.MONGO_URI || "mongodb://localhost:27017"
 export const mongoDb = mongoClient.db(ENV.MONGO_DB_NAME || "tasknest");
 let authDbConnected = false;
 
+const parseTrustedOrigins = () =>
+  (ENV.FRONTEND_URL || "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 export const auth = betterAuth({
   secret:
     ENV.BETTER_AUTH_SECRET ||
@@ -14,7 +20,7 @@ export const auth = betterAuth({
     "dev_only_change_me_with_32_chars_min",
   baseURL: ENV.BETTER_AUTH_URL || `http://localhost:${ENV.PORT || "5000"}`,
   basePath: "/api/auth/core",
-  trustedOrigins: [ENV.FRONTEND_URL || "http://localhost:3000"],
+  trustedOrigins: parseTrustedOrigins(),
   database: mongodbAdapter(mongoDb, {
     client: mongoClient,
     usePlural: true,

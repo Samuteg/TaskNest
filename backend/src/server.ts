@@ -12,6 +12,11 @@ import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
 import { auth, connectAuthDb } from "./lib/betterAuth.js";
 import { createCorsOriginChecker } from "./lib/cors.js";
+import "./models/User.ts";
+import "./models/Task.ts";
+import "./models/project.model.ts";
+import "./models/teamInvite.model.ts";
+import "./models/collaborationEvent.model.ts";
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -26,6 +31,8 @@ async function bootstrap() {
   await fastify.register(cors, {
     origin: createCorsOriginChecker(),
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   });
 
   await fastify.register(cookie);
@@ -40,36 +47,6 @@ async function bootstrap() {
   await fastify.register(apiReference, {
     routePrefix: "/docs",
     configuration: { spec: { url: "/docs/swagger/json" } },
-  });
-
-  fastify.all("/api/auth/core/*", async (request, reply) => {
-    const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(request.headers)) {
-      if (Array.isArray(value)) {
-        value.forEach((v) => headers.append(key, v));
-      } else if (value !== undefined) {
-        headers.set(key, value);
-      }
-    }
-    const body =
-      request.method !== "GET" && request.method !== "HEAD" && request.body
-        ? JSON.stringify(request.body)
-        : undefined;
-
-    const req = new Request(url.toString(), {
-      method: request.method,
-      headers,
-      body,
-    });
-
-    const response = await auth.handler(req);
-
-    reply.status(response.status);
-    response.headers.forEach((value, key) => reply.header(key, value));
-
-    const text = await response.text();
-    return reply.send(text || null);
   });
 
   await connectDB();

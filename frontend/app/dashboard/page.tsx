@@ -365,12 +365,19 @@ export default function HomePage() {
 
   const fetchUserData = async () => {
     try {
-      const res = await fetch(apiUrl("/api/auth/core/session"), {
+      const res = await fetch(apiUrl("/api/auth/core/get-session"), {
         credentials: "include",
       });
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        const sessionUser = data.user || data.session?.user;
+        if (sessionUser) {
+          setUser({
+            _id: sessionUser.id,
+            fullName: sessionUser.name || sessionUser.fullName,
+            email: sessionUser.email,
+          });
+        }
       } else router.push("/login");
     } catch {
       router.push("/login");
