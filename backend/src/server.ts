@@ -7,12 +7,16 @@ import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import apiReference from "@scalar/fastify-api-reference";
-import { toNodeHandler } from "better-auth/node";
 import { AppModule } from "./nest/app.module.js";
 import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
 import { auth, connectAuthDb } from "./lib/betterAuth.js";
 import { createCorsOriginChecker } from "./lib/cors.js";
+import "./models/User.js";
+import "./models/Task.js";
+import "./models/project.model.js";
+import "./models/teamInvite.model.js";
+import "./models/collaborationEvent.model.js";
 
 const PORT = Number(process.env.PORT || 5000);
 
@@ -27,6 +31,8 @@ async function bootstrap() {
   await fastify.register(cors, {
     origin: createCorsOriginChecker(),
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   });
 
   await fastify.register(cookie);
@@ -41,10 +47,6 @@ async function bootstrap() {
   await fastify.register(apiReference, {
     routePrefix: "/docs",
     configuration: { spec: { url: "/docs/swagger/json" } },
-  });
-
-  fastify.all("/api/auth/core/*", async (request, reply) => {
-    return toNodeHandler(auth)(request.raw, reply.raw);
   });
 
   await connectDB();

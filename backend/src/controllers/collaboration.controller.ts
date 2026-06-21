@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import CollaborationEvent from "../models/collaborationEvent.model.js";
 import Task from "../models/Task.js";
+import User from "../models/User.js";
 import { canUserAccessProjectWithRole } from "../lib/teamAccess.js";
 import {
   createActivityEvent,

@@ -5,7 +5,7 @@ import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import apiReference from "@scalar/fastify-api-reference";
-import authRoutes from "./routes/auth.route.js";
+
 import taskRoutes from "./routes/task.route.js";
 import projectRoutes from "./routes/project.route.js";
 import teamRoutes from "./routes/team.route.js";
@@ -34,7 +34,7 @@ const createApp = async () => {
     routePrefix: "/docs/swagger",
   });
 
-  app.register(authRoutes, { prefix: "/api/auth" });
+
   app.register(taskRoutes, { prefix: "/api/tasks" });
   app.register(projectRoutes, { prefix: "/api/projects" });
   app.register(teamRoutes, { prefix: "/api/team" });

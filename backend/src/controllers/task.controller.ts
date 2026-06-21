@@ -258,28 +258,28 @@ export const createTask = async (request, reply) => {
   }
 };
 
-export const updateTask = async (req, res) => {
+export const updateTask = async (request, reply) => {
   try {
-    const { id } = req.params;
-    const payload = req.body || {};
+    const { id } = request.params;
+    const payload = request.body || {};
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Tarefa inválida." });
+      return reply.status(400).send({ message: "Tarefa inválida." });
     }
 
     const task = await Task.findById(id);
     if (!task) {
-      return res.status(404).json({ message: "Tarefa não encontrada." });
+      return reply.status(404).send({ message: "Tarefa não encontrada." });
     }
 
     const { allowed } = await canUserAccessProjectWithRole(
-      req.user,
+      request.user,
       task.project,
       "editor",
     );
     if (!allowed) {
-      return res
+      return reply
         .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     const updateData: Record<string, any> = {};
@@ -293,56 +293,56 @@ export const updateTask = async (req, res) => {
       checklist: JSON.stringify(task.checklist || []),
     };
 
-    if (typeof req.body?.title === "string") {
-      const normalizedTitle = req.body.title.trim();
+    if (typeof request.body?.title === "string") {
+      const normalizedTitle = request.body.title.trim();
       if (!normalizedTitle) {
-        return res
+        return reply
           .status(400)
-          .json({ message: "Título da tarefa é obrigatório." });
+          .send({ message: "Título da tarefa é obrigatório." });
       }
       updateData.title = normalizedTitle;
     }
 
-    if (typeof req.body?.description === "string") {
-      updateData.description = req.body.description.trim();
+    if (typeof request.body?.description === "string") {
+      updateData.description = request.body.description.trim();
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "status")) {
       if (
-        typeof req.body?.status !== "string" ||
-        !allowedStatuses.has(req.body.status)
+        typeof request.body?.status !== "string" ||
+        !allowedStatuses.has(request.body.status)
       ) {
-        return res.status(400).json({ message: "Status inválido." });
+        return reply.status(400).send({ message: "Status inválido." });
       }
-      updateData.status = req.body.status;
+      updateData.status = request.body.status;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "priority")) {
       if (
-        typeof req.body?.priority !== "string" ||
-        !allowedPriorities.has(req.body.priority)
+        typeof request.body?.priority !== "string" ||
+        !allowedPriorities.has(request.body.priority)
       ) {
-        return res.status(400).json({ message: "Prioridade inválida." });
+        return reply.status(400).send({ message: "Prioridade inválida." });
       }
-      updateData.priority = req.body.priority;
+      updateData.priority = request.body.priority;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "dueDate")) {
-      const dueDateResult = parseDueDate(req.body?.dueDate);
+      const dueDateResult = parseDueDate(request.body?.dueDate);
       if (dueDateResult.error) {
-        return res.status(400).json({ message: dueDateResult.error });
+        return reply.status(400).send({ message: dueDateResult.error });
       }
       updateData.dueDate = dueDateResult.value;
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "assignee")) {
-      if (typeof req.body?.assignee !== "string") {
-        return res.status(400).json({ message: "Responsável inválido." });
+      if (typeof request.body?.assignee !== "string") {
+        return reply.status(400).send({ message: "Responsável inválido." });
       }
 
-      const normalizedAssignee = req.body.assignee.trim();
+      const normalizedAssignee = request.body.assignee.trim();
       if (normalizedAssignee.length > 120) {
-        return res.status(400).json({
+        return reply.status(400).send({
           message: "Responsável deve ter no máximo 120 caracteres.",
         });
       }
@@ -351,25 +351,25 @@ export const updateTask = async (req, res) => {
     }
 
     if (Object.prototype.hasOwnProperty.call(payload, "checklist")) {
-      const checklistResult = normalizeChecklist(req.body?.checklist);
+      const checklistResult = normalizeChecklist(request.body?.checklist);
       if (checklistResult.error) {
-        return res.status(400).json({ message: checklistResult.error });
+        return reply.status(400).send({ message: checklistResult.error });
       }
       updateData.checklist = checklistResult.value;
     }
 
     if (
-      typeof req.body?.order === "number" &&
-      Number.isFinite(req.body.order) &&
-      req.body.order >= 0
+      typeof request.body?.order === "number" &&
+      Number.isFinite(request.body.order) &&
+      request.body.order >= 0
     ) {
-      updateData.order = Math.floor(req.body.order);
+      updateData.order = Math.floor(request.body.order);
     }
 
     if (!Object.keys(updateData).length) {
-      return res
+      return reply
         .status(400)
-        .json({ message: "Nenhum dado válido para atualizar." });
+        .send({ message: "Nenhum dado válido para atualizar." });
     }
 
     Object.assign(task, updateData);
@@ -432,12 +432,12 @@ export const updateTask = async (req, res) => {
     }
 
     if (changedParts.length) {
-      const actorName = req.user?.fullName || req.user?.email || "Alguém";
+      const actorName = request.user?.fullName || request.user?.email || "Alguém";
       await runSafeCollaborationOperation(() =>
         createActivityEvent({
           projectId: task.project,
           taskId: task._id,
-          actorId: req.user._id,
+          actorId: request.user._id,
           content: `${actorName} atualizou ${listWithAnd(changedParts)} na tarefa "${task.title}".`,
           metadata: {
             action: "task.updated",
@@ -452,18 +452,18 @@ export const updateTask = async (req, res) => {
       updateData.assignee !== previousTask.assignee
     ) {
       const assigneeEmail = normalizeEmail(updateData.assignee);
-      const requesterEmail = normalizeEmail(req.user?.email);
+      const requesterEmail = normalizeEmail(request.user?.email);
       if (
         assigneeEmail &&
         emailRegex.test(assigneeEmail) &&
         assigneeEmail !== requesterEmail
       ) {
-        const actorName = req.user?.fullName || req.user?.email || "Alguém";
+        const actorName = request.user?.fullName || request.user?.email || "Alguém";
         await runSafeCollaborationOperation(() =>
           createNotificationEvent({
             projectId: task.project,
             taskId: task._id,
-            actorId: req.user._id,
+            actorId: request.user._id,
             audienceEmail: assigneeEmail,
             content: `${actorName} definiu você como responsável em "${task.title}".`,
             metadata: {
@@ -474,34 +474,34 @@ export const updateTask = async (req, res) => {
       }
     }
 
-    res.status(200).json(task);
+    reply.status(200).send(task);
   } catch (error) {
     console.error("Erro ao atualizar tarefa:", error.message);
-    res.status(500).json({ message: "Erro interno ao atualizar tarefa." });
+    reply.status(500).send({ message: "Erro interno ao atualizar tarefa." });
   }
 };
 
-export const deleteTask = async (req, res) => {
+export const deleteTask = async (request, reply) => {
   try {
-    const { id } = req.params;
+    const { id } = request.params;
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json({ message: "Tarefa inválida." });
+      return reply.status(400).send({ message: "Tarefa inválida." });
     }
 
     const task = await Task.findById(id);
     if (!task) {
-      return res.status(404).json({ message: "Tarefa não encontrada." });
+      return reply.status(404).send({ message: "Tarefa não encontrada." });
     }
 
     const { allowed } = await canUserAccessProjectWithRole(
-      req.user,
+      request.user,
       task.project,
       "editor",
     );
     if (!allowed) {
-      return res
+      return reply
         .status(403)
-        .json({ message: "Sem permissão para este projeto." });
+        .send({ message: "Sem permissão para este projeto." });
     }
 
     const taskTitle = task.title;
@@ -510,12 +510,12 @@ export const deleteTask = async (req, res) => {
 
     await task.deleteOne();
 
-    const actorName = req.user?.fullName || req.user?.email || "Alguém";
+    const actorName = request.user?.fullName || request.user?.email || "Alguém";
     await runSafeCollaborationOperation(() =>
       createActivityEvent({
         projectId,
         taskId,
-        actorId: req.user._id,
+        actorId: request.user._id,
         content: `${actorName} removeu a tarefa "${taskTitle}".`,
         metadata: {
           action: "task.deleted",
@@ -524,9 +524,9 @@ export const deleteTask = async (req, res) => {
       }),
     );
 
-    res.status(200).json({ message: "Tarefa excluída." });
+    reply.status(200).send({ message: "Tarefa excluída." });
   } catch (error) {
     console.error("Erro ao excluir tarefa:", error.message);
-    res.status(500).json({ message: "Erro interno ao excluir tarefa." });
+    reply.status(500).send({ message: "Erro interno ao excluir tarefa." });
   }
 };
