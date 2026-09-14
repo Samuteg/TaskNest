@@ -4,12 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
     "build": "tsc -b ../../packages/api && vite build",
-    "serve": "vite preview",
-    "start": "vite",
     "check-types": "tsc -b ../../packages/api && vite build && tsc --noEmit",
-    "env:generate": "varlock codegen"
+    "dev": "vite dev",
+    "env:generate": "varlock codegen",
+    "serve": "vite preview",
+    "start": "vite"
   },
   "dependencies": {
     "@TaskNest/api": "workspace:*",
@@ -27,6 +27,7 @@
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-error-boundary": "^6.1.5",
     "sonner": "catalog:",
     "varlock": "catalog:",
     "zod": "catalog:"

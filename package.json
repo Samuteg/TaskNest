@@ -1,6 +1,7 @@
 {
   "name": "TaskNest",
   "private": true,
+  "type": "module",
   "workspaces": {
     "packages": [
       "apps/*",
@@ -26,26 +27,25 @@
       "tailwindcss": "^4.3.3"
     }
   },
-  "type": "module",
   "scripts": {
-    "dev": "turbo run dev",
     "build": "turbo run build",
+    "check": "ultracite check",
     "check-types": "turbo run check-types",
-    "postinstall": "tsc -b packages/api && varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "dev:types": "tsc -b packages/api --watch",
-    "dev:web": "turbo run dev -F web --",
-    "dev:server": "turbo run dev -F server --",
-    "db:push": "turbo run db:push -F @TaskNest/db --",
-    "db:studio": "turbo run db:studio -F @TaskNest/db --",
     "db:generate": "turbo run db:generate -F @TaskNest/db --",
     "db:migrate": "turbo run db:migrate -F @TaskNest/db --",
+    "db:push": "turbo run db:push -F @TaskNest/db --",
+    "db:studio": "turbo run db:studio -F @TaskNest/db --",
+    "dev": "turbo run dev",
+    "dev:server": "turbo run dev -F server --",
+    "dev:types": "tsc -b packages/api --watch",
+    "dev:web": "turbo run dev -F web --",
     "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "docker:up": "docker compose up -d --build",
     "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
-    "check": "ultracite check",
     "fix": "ultracite fix",
+    "postinstall": "tsc -b packages/api && varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
     "prepare": "husky"
   },
   "dependencies": {

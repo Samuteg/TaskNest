@@ -5,9 +5,9 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --port=4000",
+    "lint": "oxlint",
     "start": "next start",
-    "types:check": "next typegen && tsc --noEmit",
-    "lint": "oxlint"
+    "types:check": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "cn": "^0.2.6",

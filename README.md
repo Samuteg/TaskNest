@@ -1,140 +1,153 @@
-# TaskNest
+# TaskNest 🪹
 
-This project was created with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack), a modern TypeScript stack that combines React, TanStack Router, Fastify, ORPC, and more.
+Plataforma SaaS de **gestão de projetos e tarefas** — crie projetos, convide membros com papéis (owner/admin/member), gerencie tarefas com status, prioridade, responsável e prazo, tudo com API type-safe de ponta a ponta.
 
-## Features
+> Stack: **React 19 + TanStack Router + Fastify + oRPC + Drizzle + PostgreSQL + Better-Auth**, em monorepo **Turborepo + Bun**.
 
-- **TypeScript** - For type safety and improved developer experience
-- **TanStack Router** - File-based routing with full type safety
-- **TailwindCSS** - Utility-first CSS for rapid UI development
-- **Shared UI package** - shadcn/ui primitives live in `packages/ui`
-- **Fastify** - Fast, low-overhead web framework
-- **oRPC** - End-to-end type-safe APIs with OpenAPI integration
-- **Bun** - Runtime environment
-- **Drizzle** - TypeScript-first ORM
-- **PostgreSQL** - Database engine
-- **Authentication** - Better-Auth
-- **Turborepo** - Optimized monorepo build system
-- **Biome** - Linting and formatting
-- **Oxlint** - Oxlint + Oxfmt (linting & formatting)
-- **Husky** - Git hooks for code quality
-- **Starlight** - Documentation site with Astro
+## ✨ Funcionalidades
 
-## Getting Started
+- **Landing page** (`/`) — hero, CTA, grade de recursos, prova social e footer
+- **Autenticação** — email/senha com Better-Auth (login, cadastro, sessão, menu do usuário, dark/light mode)
+- **Dashboard** (`/dashboard`) — visão geral dos projetos do usuário
+- **Projeto** (`/dashboard/$projectId`) — quadro de tarefas por status (`todo` / `in_progress` / `done`), com prioridade (`low` / `medium` / `high` / `urgent`), responsável e data de entrega
+- **Membros** — papéis `owner` / `admin` / `member`, alteração de papel e remoção
+- **Convites** — convidar por email, aceitar/recusar, listar pendentes
+- **Perfil** — dados do usuário logado
+- **Configurações** — ajustes gerais e por projeto
+- **Docs** — site de documentação (Astro Starlight em `apps/docs` + Fumadocs em `apps/fumadocs`)
 
-First, install the dependencies:
+## 🧱 Arquitetura / Monorepo
+
+```
+TaskNest/
+├── apps/
+│   ├── web/        # Frontend (React 19 + TanStack Router + Vite + Tailwind)
+│   ├── server/     # Backend API (Fastify + oRPC + OpenAPI)
+│   ├── docs/       # Site de docs (Astro Starlight)
+│   └── fumadocs/   # Site de docs alternativo (Next.js + Fumadocs)
+├── packages/
+│   ├── api/        # Routers oRPC: projects, tasks, members, invitations, profile
+│   ├── db/         # Schema Drizzle + migrations (PostgreSQL)
+│   ├── auth/       # Configuração Better-Auth
+│   ├── ui/         # shadcn/ui compartilhado + tokens/globals.css
+│   └── config/     # Config compartilhada
+├── docs/           # Documentação do projeto (guias em Markdown)
+└── docker-compose.yml  # Stack web + server
+```
+
+**Modelo de dados (PostgreSQL + Drizzle):**
+
+| Tabela | Descrição |
+| --- | --- |
+| `user`, `session`, `account`, `verification` | Better-Auth |
+| `project` | `id`, `name`, `description`, `owner_id`, timestamps |
+| `project_member` | `project_id`, `user_id`, `role` (`owner`/`admin`/`member`), único por par projeto+usuário |
+| `task` | `project_id`, `title`, `description`, `status` (`todo`/`in_progress`/`done`), `priority` (`low`/`medium`/`high`/`urgent`), `assignee_id`, `due_date` |
+| `invitation` | convites por email com status e expiração |
+
+Detalhes em [`docs/arquitetura.md`](docs/arquitetura.md) e [`docs/banco-de-dados.md`](docs/banco-de-dados.md).
+
+## 🚀 Começando
+
+### Pré-requisitos
+
+- [Bun](https://bun.sh) `>= 1.4.2`
+- [Docker](https://www.docker.com) + Docker Compose (para rodar via containers)
+- PostgreSQL (local ou via `db:push` contra um banco existente)
+
+### 1. Instalar dependências
 
 ```bash
 bun install
 ```
 
-## Database Setup
+O `postinstall` gera os routers tipados (`tsc -b packages/api`) e o `env` tipado via Varlock.
 
-This project uses PostgreSQL with Drizzle ORM.
+### 2. Configurar ambiente
 
-1. Make sure you have a PostgreSQL database set up.
-2. Update your `apps/server/.env` file with your PostgreSQL connection details.
-
-3. Apply the schema to your database:
+Cada app tem seu `.env.schema` (versionado). Segredos ficam nos `.env` (ignorados pelo git) ou na plataforma de deploy:
 
 ```bash
-bun run db:push
+cp apps/server/.env.example apps/server/.env   # se existir; senão crie a partir do schema
+cp apps/web/.env.example apps/web/.env
+cp packages/db/.env.example packages/db/.env
+bun run env:generate   # após alterar qualquer .env.schema
 ```
 
-Then, run the development server:
+> O carregamento automático de env do Bun está desativado em `bunfig.toml`; quem carrega é o bootstrap do server (Varlock) / integração do framework.
+
+### 3. Banco de dados
 
 ```bash
-bun run dev
+bun run db:push      # aplica o schema (dev)
+bun run db:generate  # gera client/tipos
+bun run db:migrate   # roda migrations (prod)
+bun run db:studio    # UI do banco
 ```
 
-Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
-The API is running at [http://localhost:3000](http://localhost:3000).
-
-## UI Customization
-
-React web apps in this stack share shadcn/ui primitives through `packages/ui`.
-
-- Change design tokens and global styles in `packages/ui/src/styles/globals.css`
-- Update shared primitives in `packages/ui/src/components/*`
-- Adjust shadcn aliases or style config in `packages/ui/components.json` and `apps/web/components.json`
-
-### Add more shared components
-
-Run this from the project root to add more primitives to the shared UI package:
+### 4. Rodar em desenvolvimento
 
 ```bash
-npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+bun run dev          # web + server (turbo)
+bun run dev:web      # só o frontend
+bun run dev:server   # só a API
 ```
 
-Import shared components like this:
+- Web: http://localhost:3001
+- API: http://localhost:3000
 
-```tsx
-import { Button } from "@TaskNest/ui/components/button";
+## 🐳 Docker
+
+```bash
+bun run docker:build  # build das imagens
+bun run docker:up     # sobe web + server
+bun run docker:logs   # logs
+bun run docker:down   # para a stack
 ```
 
-### Add app-specific blocks
+Variáveis públicas do web são embutidas no build (`VITE_*`); rede entre containers é resolvida via `docker-compose.yml`.
 
-If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
+## 📜 Scripts
 
-## Environment Configuration
+| Script | O que faz |
+| --- | --- |
+| `bun run dev` | Sobe tudo em modo dev |
+| `bun run build` | Build de todos os apps |
+| `bun run check-types` | Checa tipos no monorepo |
+| `bun run dev:types` | Watch das declarações de `packages/api` |
+| `bun run db:push / db:generate / db:migrate / db:studio` | Banco de dados |
+| `bun run check` / `bun run fix` | Lint/format (Ultracite/Biome) |
+| `bun run docker:build / up / logs / down` | Docker Compose |
+| `cd apps/docs && bun run dev` | Site de docs Starlight |
 
-Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `bun run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
+## 🎨 UI compartilhada (shadcn/ui)
 
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
+Primitivos ficam em `packages/ui`:
 
-Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
+- Tokens e estilos globais: `packages/ui/src/styles/globals.css`
+- Primitivos: `packages/ui/src/components/*`
+- Uso: `import { Button } from "@TaskNest/ui/components/button"`
+- Adicionar primitivos: `npx shadcn@latest add accordion dialog popover sheet table -c packages/ui`
+- Blocos só do app web: rode o shadcn CLI dentro de `apps/web`
 
-## Deployment
+## ✅ Qualidade de código
 
-### Docker Compose
+- Padrão **Ultracite** (Biome por baixo): `bun run fix` antes de commitar, `bun run check` no CI
+- Hooks: Husky + Lefthook (`bun run prepare` para inicializar)
+- Guia completo em [`AGENTS.md`](AGENTS.md)
 
-- Target: web + server
-- Config: `docker-compose.yml` (app Dockerfiles live in `apps/*/Dockerfile`)
-- Build images: bun run docker:build
-- Start: bun run docker:up
-- Logs: bun run docker:logs
-- Stop: bun run docker:down
+## 📚 Documentação
 
-Environment variables are read from each app's `.env` file (baked into web builds for public variables) and overridden in `docker-compose.yml` for container networking.
+- Guias do projeto: [`docs/`](docs/) — [índice](docs/indice.md)
+  - [Começando](docs/comecando.md) · [Arquitetura](docs/arquitetura.md) · [Banco de dados](docs/banco-de-dados.md) · [API](docs/api.md) · [Autenticação](docs/autenticacao.md) · [Deploy](docs/deploy.md)
+- Site Starlight: `apps/docs` · Site Fumadocs: `apps/fumadocs`
 
-For more details, see the guide on [Deploying with Docker Compose](https://www.better-t-stack.dev/docs/guides/docker).
+## 🤝 Contribuindo
 
-## Git Hooks and Formatting
+1. `bun run prepare` (hooks), crie uma branch a partir de `main`
+2. `bun run fix` + `bun run check-types` antes do PR
+3. Descreva o que mudou e como testar
 
-- Initialize hooks: `bun run prepare`
-- Run checks: `bun run check`
+## 📄 Licença
 
-## Project Structure
-
-```
-TaskNest/
-├── apps/
-│   ├── web/         # Frontend application (React + TanStack Router)
-│   ├── docs/        # Documentation site (Astro Starlight)
-│   └── server/      # Backend API (Fastify, ORPC)
-├── packages/
-│   ├── ui/          # Shared shadcn/ui components and styles
-│   ├── api/         # API layer / business logic
-│   ├── auth/        # Authentication configuration & logic
-│   └── db/          # Database schema & queries
-```
-
-## Available Scripts
-
-- `bun run dev`: Start all applications in development mode
-- `bun run build`: Build all applications
-- `bun run dev:web`: Start only the web application
-- `bun run dev:server`: Start only the server
-- `bun run check-types`: Check TypeScript types across all apps
-- `bun run dev:types`: Watch API and dependency declarations when running an app individually. The root `dev` command already starts this watcher; installation and builds generate declarations automatically.
-- `bun run db:push`: Push schema changes to database
-- `bun run db:generate`: Generate database client/types
-- `bun run db:migrate`: Run database migrations
-- `bun run db:studio`: Open database studio UI
-- `bun run check`: Run Biome formatting and linting
-- `cd apps/docs && bun run dev`: Start documentation site
-- `cd apps/docs && bun run build`: Build documentation site
-- `bun run docker:build`: Build the Docker Compose images
-- `bun run docker:up`: Build and start the Docker Compose stack
-- `bun run docker:logs`: Tail logs from the Docker Compose stack
-- `bun run docker:down`: Stop the Docker Compose stack
+Defina a licença do projeto (ex.: MIT) em `LICENSE`.
