@@ -1,11 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { ProjectList } from "@/components/dashboard/project-list";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_auth/dashboard")({
-	component: DashboardPage,
+	component: DashboardLayout,
 });
 
-function DashboardPage() {
-	return <ProjectList />;
+function DashboardLayout() {
+	return <Outlet />;
 }

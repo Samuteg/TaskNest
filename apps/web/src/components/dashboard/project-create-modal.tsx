@@ -10,6 +10,7 @@ import { Input } from "@TaskNest/ui/components/input";
 import { Label } from "@TaskNest/ui/components/label";
 import { Textarea } from "@TaskNest/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
@@ -23,13 +24,14 @@ export function ProjectCreateModal() {
 	const [error, setError] = useState<string | null>(null);
 
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 
 	const createProject = useMutation(
 		orpc.projects.create.mutationOptions({
 			onError: (err) => {
 				toast.error(err.message);
 			},
-			onSuccess: () => {
+			onSuccess: (newProject) => {
 				queryClient.invalidateQueries({
 					queryKey: orpc.projects.list.queryKey(),
 				});
@@ -38,6 +40,12 @@ export function ProjectCreateModal() {
 				setDescription("");
 				setError(null);
 				setOpen(false);
+				if (newProject?.id) {
+					navigate({
+						params: { projectId: newProject.id },
+						to: "/dashboard/$projectId",
+					});
+				}
 			},
 		})
 	);
