@@ -1,0 +1,31 @@
+---
+title: Deploy
+description: Docker Compose e checklist de produção.
+---
+
+## Docker Compose (recomendado)
+
+```bash
+bun run docker:build
+bun run docker:up     # web :3001 → 80 interno · server :3000
+bun run docker:logs
+bun run docker:down
+```
+
+- Dockerfiles em `apps/web/Dockerfile` e `apps/server/Dockerfile`.
+- `VITE_SERVER_URL` é ARG de build do web (default `http://localhost:3000`).
+- `CORS_ORIGIN` do server aponta para o web público.
+- `.env` por app (`env_file`, opcional) + overrides no `docker-compose.yml` para rede de containers.
+
+## Produção (checklist)
+
+1. `DATABASE_URL` gerenciada (ex.: Neon/Supabase/RDS) + `bun run db:migrate`.
+2. `BETTER_AUTH_SECRET` forte + `CORS_ORIGIN` com o domínio real.
+3. Build do web com `VITE_SERVER_URL` da API pública.
+4. Healthchecks já configurados no compose (web `/`, server `/`).
+5. Logs via `docker logs` / plataforma; nunca logar segredos.
+
+## Sites de docs
+
+- `apps/docs` (Starlight): `cd apps/docs && bun run dev` / `bun run build`.
+- `apps/fumadocs` (Next): `cd apps/fumadocs && bun run dev` / `bun run build`.

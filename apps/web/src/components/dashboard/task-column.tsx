@@ -1,7 +1,13 @@
 import type { AppRouterClient } from "@TaskNest/api/routers/index";
 import { Badge } from "@TaskNest/ui/components/badge";
 import { Button } from "@TaskNest/ui/components/button";
+import { useDroppable } from "@dnd-kit/core";
+import {
+	SortableContext,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
+import { useCallback } from "react";
 
 import { TaskCard } from "./task-card";
 
@@ -26,17 +32,32 @@ export function TaskColumn({
 	tasks,
 	onTaskClick,
 	onAddTask,
+	isOver,
 }: {
 	status: "todo" | "in_progress" | "done";
 	tasks: Task[];
 	onTaskClick: (task: Task) => void;
 	onAddTask: (status: "todo" | "in_progress" | "done") => void;
+	isOver?: boolean;
 }) {
 	const meta = statusMeta[status];
+	const taskIds = tasks.map((t) => t.id);
+
+	const { setNodeRef } = useDroppable({
+		data: { status },
+		id: `column-${status}`,
+	});
+
+	const handleAddClick = useCallback(() => {
+		onAddTask(status);
+	}, [onAddTask, status]);
 
 	return (
 		<div
-			className={`flex flex-col rounded-lg border ${meta.border} ${meta.bg} min-h-[500px] w-80 shrink-0 p-3`}
+			className={`flex flex-col rounded-lg border transition-colors ${meta.border} ${meta.bg} min-h-[500px] w-80 shrink-0 p-3 ${
+				isOver ? "ring-2 ring-primary/30" : ""
+			}`}
+			ref={setNodeRef}
 		>
 			<div className="flex items-center justify-between pb-3">
 				<div className="flex items-center gap-2">
@@ -47,7 +68,7 @@ export function TaskColumn({
 				</div>
 				<Button
 					className="h-7 w-7"
-					onClick={() => onAddTask(status)}
+					onClick={handleAddClick}
 					size="icon"
 					variant="ghost"
 				>
@@ -55,22 +76,34 @@ export function TaskColumn({
 				</Button>
 			</div>
 
-			<div className="flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
-				{tasks.map((task) => (
-					<TaskCard
-						key={task.id}
-						onClick={() => onTaskClick(task)}
-						task={task}
-					/>
-				))}
-				{tasks.length === 0 ? (
-					<div className="flex flex-1 items-center justify-center p-4 text-center">
-						<p className="text-muted-foreground text-xs">
-							No tasks in this column
-						</p>
-					</div>
-				) : null}
-			</div>
+			<SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+				<div className="flex flex-1 flex-col gap-2 overflow-y-auto pr-1">
+					{tasks.map((task) => (
+						<TaskCardItem key={task.id} onTaskClick={onTaskClick} task={task} />
+					))}
+					{tasks.length === 0 ? (
+						<div className="flex flex-1 items-center justify-center p-4 text-center">
+							<p className="text-muted-foreground text-xs">
+								No tasks in this column
+							</p>
+						</div>
+					) : null}
+				</div>
+			</SortableContext>
 		</div>
 	);
+}
+
+function TaskCardItem({
+	task,
+	onTaskClick,
+}: {
+	task: Task;
+	onTaskClick: (task: Task) => void;
+}) {
+	const handleClick = useCallback(() => {
+		onTaskClick(task);
+	}, [onTaskClick, task]);
+
+	return <TaskCard onClick={handleClick} task={task} />;
 }

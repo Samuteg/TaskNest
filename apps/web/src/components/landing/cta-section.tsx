@@ -1,5 +1,4 @@
 import { Button } from "@TaskNest/ui/components/button";
-import { Link } from "@tanstack/react-router";
 import { ArrowRight, FolderKanban, ShieldCheck } from "lucide-react";
 
 export function CtaSection() {
@@ -7,7 +6,6 @@ export function CtaSection() {
 		<section className="py-24">
 			<div className="container mx-auto max-w-5xl px-4">
 				<div className="relative overflow-hidden rounded-3xl border bg-primary text-primary-foreground">
-					{/* Background gradient decorative elements */}
 					<div className="absolute top-0 left-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl" />
 					<div className="absolute right-0 bottom-0 h-64 w-64 translate-x-1/2 translate-y-1/2 rounded-full bg-black/20 blur-3xl" />
 
@@ -19,32 +17,34 @@ export function CtaSection() {
 						</div>
 
 						<h2 className="max-w-2xl font-extrabold text-3xl tracking-tight sm:text-4xl md:text-5xl">
-							Ready to ship faster and collaborate seamlessly?
+							TaskNest is open-source
 						</h2>
 
 						<p className="max-w-xl text-sm opacity-90 sm:text-base">
-							Join thousands of developers and product teams who are already
-							managing complex engineering workflows inside TaskNest. Setup
-							takes less than 2 minutes.
+							Clone the repo, configure your PostgreSQL database, and run it
+							yourself. Docker Compose included — under 2 minutes to get
+							running.
 						</p>
 
 						<div className="flex w-full max-w-sm flex-col gap-3 pt-2 sm:flex-row">
-							<Link className="flex-1" to="/login">
+							<a
+								href="https://github.com/Samuteg/TaskNest"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
 								<Button
 									className="h-12 w-full gap-2 bg-white font-semibold text-primary text-sm shadow-lg hover:bg-white/90"
 									size="lg"
 								>
-									<span>Launch TaskNest Free</span>
+									<span>View on GitHub</span>
 									<ArrowRight className="h-4 w-4" />
 								</Button>
-							</Link>
+							</a>
 						</div>
 
 						<div className="flex items-center gap-2 pt-4 font-medium text-xs opacity-80">
 							<ShieldCheck className="h-4 w-4" />
-							<span>
-								No credit card required • Free forever for basic usage
-							</span>
+							<span>Docker Compose · PostgreSQL · No vendor lock-in</span>
 						</div>
 					</div>
 				</div>

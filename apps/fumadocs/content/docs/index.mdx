@@ -1,13 +1,31 @@
 ---
-title: Hello World
-description: Your first document
+title: TaskNest Backend
+description: Documentação do backend da plataforma de gestão de projetos e tarefas.
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+import { Cards, Card } from "fumadocs-ui/components/card";
 
-## What is Next?
+TaskNest é uma plataforma SaaS de gestão de projetos e tarefas com API type-safe de ponta a ponta.
+
+Stack: **Fastify + oRPC + Drizzle + PostgreSQL + Better-Auth**, em monorepo Turborepo + Bun.
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Começando" href="/docs/getting-started">
+    Pré-requisitos, configuração de ambiente e primeiros passos.
+  </Card>
+  <Card title="Arquitetura" href="/docs/architecture">
+    Monorepo, apps, pacotes e fluxo de dados.
+  </Card>
+  <Card title="Banco de Dados" href="/docs/database">
+    Tabelas, enums, índices e migrations.
+  </Card>
+  <Card title="API" href="/docs/api">
+    Routers oRPC, autorização e OpenAPI.
+  </Card>
+  <Card title="Autenticação" href="/docs/auth">
+    Better-Auth, sessão e papéis de projeto.
+  </Card>
+  <Card title="Deploy" href="/docs/deploy">
+    Docker Compose e checklist de produção.
+  </Card>
 </Cards>

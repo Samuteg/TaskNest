@@ -1,6 +1,6 @@
 import { createGetUrl } from "fumadocs-core/source";
 
-export const appName = "My App";
+export const appName = "TaskNest";
 export const docsRoute = "/docs";
 export const docsImageRoute = "/og/docs";
 export const docsContentRoute = "/llms.mdx/docs";
@@ -8,8 +8,8 @@ export const docsContentRoute = "/llms.mdx/docs";
 // fill this with your actual GitHub info, for example:
 export const gitConfig = {
 	branch: "main",
-	repo: "fumadocs",
-	user: "fuma-nama",
+	repo: "TaskNest",
+	user: "MxTeg",
 };
 
 const getContentUrl = createGetUrl(docsContentRoute);

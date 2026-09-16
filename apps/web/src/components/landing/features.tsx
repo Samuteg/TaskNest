@@ -11,12 +11,11 @@ export function Features() {
 						Platform Capabilities
 					</Badge>
 					<h2 className="font-bold text-3xl tracking-tight sm:text-4xl">
-						Purpose-built for modern software teams
+						What TaskNest actually does
 					</h2>
 					<p className="text-muted-foreground text-sm sm:text-base">
-						TaskNest cuts out the bloat of enterprise project management tools
-						and focuses on speed, developer experience, and strict role-based
-						access control.
+						No bloat, no features you'll never use. Just projects, tasks, Kanban
+						boards, and team collaboration — done well.
 					</p>
 				</div>
 
@@ -32,9 +31,9 @@ export function Features() {
 									Real-Time Kanban Boards
 								</h3>
 								<p className="text-muted-foreground text-sm leading-relaxed">
-									Drag and drop tasks across customizable statuses. See task
-									updates and priority changes instantly without refreshing the
-									page, powered by fine-grained reactive state.
+									Drag and drop tasks across To Do, In Progress, and Done.
+									Updates appear instantly on every connected device — no
+									refresh needed.
 								</p>
 							</div>
 							<div className="hidden h-48 w-64 items-center justify-center gap-3 rounded-2xl border bg-background/50 p-4 shadow-inner backdrop-blur-xs md:flex">
@@ -63,8 +62,8 @@ export function Features() {
 							</div>
 							<h3 className="font-semibold text-base">Priority Levels</h3>
 							<p className="text-muted-foreground text-xs leading-relaxed">
-								Differentiate Critical bugs from standard chores with 4 distinct
-								priority tiers: Urgent, High, Medium, and Low.
+								4 distinct priority tiers: Urgent, High, Medium, and Low. Spot
+								critical bugs at a glance on the board.
 							</p>
 						</CardContent>
 					</Card>
@@ -78,9 +77,8 @@ export function Features() {
 								Role-Based Access Control
 							</h3>
 							<p className="text-muted-foreground text-xs leading-relaxed">
-								Easily toggle between Owner, Admin, and Member roles. Protect
-								critical actions like inviting users or deleting projects
-								automatically.
+								Owner, Admin, and Member roles. Members can't delete projects or
+								invite strangers. Set once, enforced everywhere.
 							</p>
 						</CardContent>
 					</Card>
@@ -92,8 +90,8 @@ export function Features() {
 							</div>
 							<h3 className="font-semibold text-base">Assignee Tracking</h3>
 							<p className="text-muted-foreground text-xs leading-relaxed">
-								Assign tasks directly to colleagues. When looking at the Kanban
-								board, see avatars and track who owns what at a glance.
+								Assign tasks to team members. See avatars on the Kanban board to
+								know who owns what.
 							</p>
 						</CardContent>
 					</Card>
@@ -105,9 +103,8 @@ export function Features() {
 							</div>
 							<h3 className="font-semibold text-base">Zero Config Auth</h3>
 							<p className="text-muted-foreground text-xs leading-relaxed">
-								Built securely on Better Auth with native session-based
-								management, CSRF protection, HTTP-only cookies, and strong
-								origin handling.
+								Email and password. Session cookies, CSRF protection, trusted
+								origins. Nothing to configure — it works out of the box.
 							</p>
 						</CardContent>
 					</Card>
@@ -119,17 +116,17 @@ export function Features() {
 									<Gauge className="h-5 w-5" />
 								</div>
 								<h3 className="font-semibold text-base">
-									Blazing Fast & Strictly Typed
+									Type-Safe End to End
 								</h3>
 								<p className="text-muted-foreground text-xs leading-relaxed">
-									Zero unused re-renders via TanStack Query, type-safe
-									end-to-end routing via TanStack Router, and highly optimized
-									oRPC server-side handlers.
+									oRPC generates types from your server handlers. TanStack
+									Router validates routes. TanStack Query manages server state.
+									No runtime surprises.
 								</p>
 							</div>
 							<div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 font-mono text-primary text-xs">
-								<div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-								oRPC Latency: &lt;15ms
+								<div className="h-2 w-2 rounded-full bg-green-500" />
+								oRPC + Zod validation
 							</div>
 						</CardContent>
 					</Card>

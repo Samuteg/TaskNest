@@ -1,0 +1,75 @@
+---
+title: Banco de Dados
+description: Tabelas, enums, índices e migrations.
+---
+
+PostgreSQL + Drizzle. Schema em `packages/db/src/schema/`, migrations em `packages/db/src/migrations/`.
+
+## Tabelas
+
+### Auth (Better-Auth)
+
+`user`, `session`, `account`, `verification` — padrão do Better-Auth.
+
+### project
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid PK | default random |
+| `name` | text | not null |
+| `description` | text | nullable |
+| `owner_id` | text → user.id | cascade on delete, indexado |
+| `created_at` / `updated_at` | timestamp | default now / on update |
+
+### project_member
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid PK | |
+| `project_id` | uuid → project.id | cascade, indexado |
+| `user_id` | text → user.id | cascade, indexado |
+| `role` | enum `project_role` | `owner` / `admin` / `member`, default `member` |
+| unique | `(project_id, user_id)` | um vínculo por usuário/projeto |
+
+### task
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid PK | |
+| `project_id` | uuid → project.id | cascade, indexado |
+| `title` | text | not null |
+| `description` | text | nullable |
+| `status` | enum `task_status` | `todo` / `in_progress` / `done`, default `todo`, indexado |
+| `priority` | enum `task_priority` | `low` / `medium` / `high` / `urgent`, default `medium` |
+| `assignee_id` | text → user.id | `set null` on delete, indexado |
+| `due_date` | timestamp | nullable |
+| `created_at` / `updated_at` | timestamp | |
+
+### invitation
+
+Convite por email com projeto, papel, status e expiração. Verifique o schema em `packages/db/src/schema/invitations.ts` para os campos exatos.
+
+## Enums
+
+| Enum | Valores |
+| --- | --- |
+| `project_role` | `owner`, `admin`, `member` |
+| `task_status` | `todo`, `in_progress`, `done` |
+| `task_priority` | `low`, `medium`, `high`, `urgent` |
+
+Alterar um enum no Postgres exige migration manual.
+
+## Comandos
+
+```bash
+bun run db:push      # sincroniza schema (dev)
+bun run db:generate  # gera artefatos do drizzle
+bun run db:migrate   # aplica migrations (prod)
+bun run db:studio    # UI visual
+```
+
+## Convenções
+
+- PKs uuid (`defaultRandom`), FKs com `onDelete` explícito (cascade em projeto/membro, set null em assignee).
+- Enums no Postgres — alterar enum exige migration.
+- `updated_at` com `$onUpdate(() => new Date())`.

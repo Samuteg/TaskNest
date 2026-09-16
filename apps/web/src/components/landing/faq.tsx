@@ -1,46 +1,46 @@
 import { Badge } from "@TaskNest/ui/components/badge";
 import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const FAQS = [
 	{
 		answer:
-			"Yes! The Starter plan is entirely free forever and includes unlimited tasks, 5 active projects, and up to 3 team members per project. No credit card is required to sign up.",
-		question: "Is TaskNest completely free to use?",
+			"Yes, 100% free with no credit card required. Up to 5 projects, unlimited tasks, and 3 members per project.",
+		question: "Is TaskNest really free?",
 	},
 	{
 		answer:
-			"You can invite users directly via their email address from the project settings. They receive an automated invite token valid for 7 days. Once they sign up or log in, they are automatically assigned the role (Admin or Member) you chose.",
-		question: "How does team member invitation work?",
+			"Yes! Docker Compose files are included in the repository. You can spin up the web frontend, server API, and connect your own PostgreSQL database in under 2 minutes.",
+		question: "Can I self-host TaskNest?",
 	},
 	{
 		answer:
-			"Only the project Owner can delete a project. To prevent accidental deletions, TaskNest places the action inside a dedicated 'Danger Zone' tab and requires a confirmation dialog.",
-		question: "Can I delete a project with active tasks and members?",
+			"Not yet. TaskNest is currently a web application (SPA) optimized for desktop and tablet browsers. PWA and mobile support are on the roadmap.",
+		question: "Is there a mobile app?",
 	},
 	{
 		answer:
-			"TaskNest utilizes modern, session-based authentication powered by Better Auth. It includes secure, HTTP-only cookies, CSRF protection, and robust session management with trusted origin handling.",
-		question: "What kind of authentication does TaskNest use?",
+			"No, TaskNest requires an active server connection for real-time synchronization between team members.",
+		question: "Does it work offline?",
 	},
 	{
 		answer:
-			"Yes! Tasks have an optional 'Assignee' field. You can assign a task to any member of the project directly when creating or editing it. The Kanban board visually displays the avatar of the assignee.",
-		question: "Can tasks be assigned to specific team members?",
+			"Not currently. Import tools for Notion, Todoist, and Trello are planned for future releases. Open an issue on GitHub if you need a specific importer.",
+		question: "Can I import data from Notion or Todoist?",
 	},
 	{
 		answer:
-			"Invitations are automatically marked as expired after 7 days. If a user tries to accept an expired invite, they are shown a warning, and the project admin can simply send a fresh invitation.",
-		question: "What happens when an invitation expires?",
+			"You invite members by email address from project settings. They receive an email token valid for 7 days. You can assign them Owner, Admin, or Member roles.",
+		question: "How do team invitations work?",
 	},
 ] as const;
 
 export function FAQ() {
 	const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-	const toggle = (idx: number) => {
+	const toggle = useCallback((idx: number) => {
 		setOpenIndex((prev) => (prev === idx ? null : idx));
-	};
+	}, []);
 
 	return (
 		<section className="border-b bg-background py-24">
@@ -54,7 +54,7 @@ export function FAQ() {
 						Frequently Asked Questions
 					</Badge>
 					<h2 className="font-bold text-3xl tracking-tight sm:text-4xl">
-						Everything you need to know about TaskNest
+						Honest answers to common questions
 					</h2>
 				</div>
 

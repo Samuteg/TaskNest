@@ -1,0 +1,50 @@
+---
+title: Componentes UI
+description: shadcn/ui, tokens e sistema de design.
+---
+
+O design system é compartilhado via `packages/ui`, usando [shadcn/ui](https://ui.shadcn.com).
+
+## Estrutura
+
+```
+packages/ui/src/
+├── styles/
+│   └── globals.css    # Tokens CSS e variáveis
+├── components/
+│   ├── button.tsx
+│   ├── dialog.tsx
+│   ├── popover.tsx
+│   ├── sheet.tsx
+│   ├── table.tsx
+│   └── ...            # Outros primitivos
+└── lib/
+    └── utils.ts       # cn() helper
+```
+
+## Uso
+
+```tsx
+import { Button } from "@TaskNest/ui/components/button";
+```
+
+## Tokens
+
+As variáveis CSS estão em `packages/ui/src/styles/globals.css`. Use-as via classes Tailwind:
+
+```css
+--background, --foreground, --primary, --secondary,
+--muted, --accent, --destructive, --border, --input, --ring
+```
+
+## Adicionar primitivos
+
+```bash
+npx shadcn@latest add accordion dialog popover sheet table -c packages/ui
+```
+
+Para blocos específicos do app web, rode o shadcn CLI dentro de `apps/web`.
+
+## Dark/Light mode
+
+O tema é controlado via classe `dark` no `<html>`. O toggle fica no menu do usuário.

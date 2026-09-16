@@ -1,0 +1,34 @@
+---
+title: Fluxo de Autenticação
+description: Login, sessão, menu do usuário e dark mode.
+---
+
+## Fluxo completo
+
+1. Usuário acessa `/login`
+2. Preenche email + senha
+3. `auth-client` envia para Better-Auth (`apps/web/src/lib/auth-client.ts`)
+4. Sessão salva em cookie http-only
+5. Header reflete estado logado (menu do usuário)
+6. Todas as requests à API levam o cookie automaticamente
+
+## Componentes-chave
+
+| Componente | Caminho | Função |
+| --- | --- | --- |
+| `auth-client` | `apps/web/src/lib/auth-client.ts` | Cliente Better-Auth |
+| `user-menu` | `apps/web/src/components/user-menu.tsx` | Menu do usuário logado |
+| `header` | `apps/web/src/components/header.tsx` | Barra superior com nav e auth |
+| `login` | `apps/web/src/routes/login.tsx` | Página de login/cadastro |
+
+## O backend verifica
+
+- Sessão válida em cada request à API
+- Membership do projeto (quando `projectId` na rota)
+- Papel do usuário (owner/admin/member) para ações restritas
+
+## Dark mode
+
+- Toggle no menu do usuário
+- Usa classe `dark` no `<html>`
+- Tokens CSS em `packages/ui/src/styles/globals.css` suportam ambos os temas

@@ -1,39 +1,38 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: TaskNest Frontend
+description: Documentação do frontend da plataforma de gestão de projetos e tarefas.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
+  tagline: Documentação do frontend — React 19 + TanStack Router + shadcn/ui.
   image:
     file: ../../assets/houston.webp
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Começar
+      link: /guides/getting-started/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+    - text: GitHub
+      link: https://github.com/MxTeg/TaskNest
       icon: external
       variant: minimal
 ---
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-## Next steps
+## Sobre
+
+TaskNest é uma plataforma SaaS de gestão de projetos e tarefas. O frontend usa **React 19 + TanStack Router + Vite + Tailwind + shadcn/ui**.
 
 <CardGrid stagger>
-  <Card title="Update content" icon="pencil">
-    Edit `src/content/docs/index.mdx` to see this page change.
+  <Card title="Começando" icon="rocket">
+    Pré-requisitos, instalação e rotas do app.
   </Card>
-  <Card title="Change page layout" icon="document">
-    Delete `template: splash` in `src/content/docs/index.mdx` to display a sidebar on this page.
+  <Card title="Página do Projeto" icon="task">
+    Quadro Kanban, tarefas, drag & drop e filtros.
   </Card>
-  <Card title="Add new content" icon="add-document">
-    Add Markdown or MDX files to `src/content/docs` to create new pages.
+  <Card title="Componentes UI" icon="puzzle">
+    shadcn/ui, tokens e sistema de design.
   </Card>
-  <Card title="Configure your site" icon="setting">
-    Edit your `sidebar` and other config in `astro.config.mjs`.
-  </Card>
-  <Card title="Read the docs" icon="open-book">
-    Learn more in [the Starlight Docs](https://starlight.astro.build/).
+  <Card title="Autenticação" icon="lock">
+    Login, sessão, menu do usuário e dark mode.
   </Card>
 </CardGrid>

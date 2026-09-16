@@ -9,24 +9,26 @@ export default defineConfig({
 			sidebar: [
 				{
 					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: "Example Guide", slug: "guides/example" },
+						{ label: "Começando", slug: "guides/getting-started" },
+						{ label: "Página do Projeto", slug: "guides/project-page" },
+						{ label: "Componentes UI", slug: "guides/ui-components" },
+						{ label: "Fluxo de Autenticação", slug: "guides/auth-flow" },
 					],
-					label: "Guides",
+					label: "Guias",
 				},
 				{
 					items: [{ autogenerate: { directory: "reference" } }],
-					label: "Reference",
+					label: "Referência",
 				},
 			],
 			social: [
 				{
-					href: "https://github.com/withastro/starlight",
+					href: "https://github.com/MxTeg/TaskNest",
 					icon: "github",
 					label: "GitHub",
 				},
 			],
-			title: "My Docs",
+			title: "TaskNest Frontend",
 		}),
 	],
 });

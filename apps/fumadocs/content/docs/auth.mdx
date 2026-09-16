@@ -1,0 +1,31 @@
+---
+title: Autenticação
+description: Better-Auth, sessão e papéis de projeto.
+---
+
+Better-Auth (`packages/auth`), com tabelas `user/session/account/verification` no Postgres.
+
+## Fluxo
+
+1. Usuário cadastra/loga em `/login` (email + senha) via `auth-client` (`apps/web/src/lib/auth-client.ts`).
+2. Sessão em cookie http-only; `user-menu`/`header` refletem o estado.
+3. Cada request à API leva o cookie; o contexto oRPC (`apps/server/src/context.ts`) resolve sessão + `db`.
+4. Routers exigem sessão e, quando há `projectId`, membership válida.
+
+## Papéis de projeto
+
+`owner` > `admin` > `member`:
+
+| Papel | Permissões |
+| --- | --- |
+| **member** | Ver projeto, criar/editar tarefas |
+| **admin** | Tudo do member + convidar, gerenciar membros/tarefas |
+| **owner** | Tudo do admin + excluir projeto, gerenciar owners |
+
+## Variáveis relevantes
+
+| Variável | Descrição |
+| --- | --- |
+| `BETTER_AUTH_SECRET` | Segredo das sessões (server, nunca commitar) |
+| `CORS_ORIGIN` | Domínio liberado para CORS (ex.: `http://localhost:3001` em dev) |
+| `VITE_SERVER_URL` | URL da API no client (default `http://localhost:3000`) |

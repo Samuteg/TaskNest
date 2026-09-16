@@ -1,6 +1,6 @@
-import { project, projectMember } from "@TaskNest/db";
+import { project, projectMember, task } from "@TaskNest/db";
 import { ORPCError } from "@orpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
@@ -73,15 +73,69 @@ export const projectsRouter = {
 			}
 			return membership.project;
 		}),
+
 	list: protectedProcedure.handler(async ({ context }) => {
 		const userId = context.session.user.id;
+
+		const statsSubquery = context.db
+			.select({
+				doneCount:
+					sql<number>`count(*) filter (where ${task.status} = 'done')`.as(
+						"done_count"
+					),
+				inProgressCount:
+					sql<number>`count(*) filter (where ${task.status} = 'in_progress')`.as(
+						"in_progress_count"
+					),
+				projectId: task.projectId,
+				taskCount: sql<number>`count(*)`.as("task_count"),
+				todoCount:
+					sql<number>`count(*) filter (where ${task.status} = 'todo')`.as(
+						"todo_count"
+					),
+			})
+			.from(task)
+			.groupBy(task.projectId)
+			.as("task_stats");
+
 		const memberships = await context.db.query.projectMember.findMany({
 			where: eq(projectMember.userId, userId),
 			with: {
-				project: true,
+				project: {
+					columns: {
+						createdAt: true,
+						description: true,
+						id: true,
+						name: true,
+						ownerId: true,
+						updatedAt: true,
+					},
+				},
 			},
 		});
-		return memberships.map((m) => m.project);
+
+		const projectIds = memberships.map((m) => m.project.id);
+		if (projectIds.length === 0) {
+			return [];
+		}
+
+		const stats = await context.db
+			.select()
+			.from(statsSubquery)
+			.where(sql`${statsSubquery.projectId} in ${projectIds}`);
+
+		const statsMap = new Map(stats.map((s) => [s.projectId, s]));
+
+		return memberships.map((m) => {
+			const s = statsMap.get(m.project.id);
+			return {
+				...m.project,
+				doneCount: s?.doneCount ?? 0,
+				inProgressCount: s?.inProgressCount ?? 0,
+				taskCount: s?.taskCount ?? 0,
+				todoCount: s?.todoCount ?? 0,
+			};
+		});
 	}),
 
 	update: protectedProcedure

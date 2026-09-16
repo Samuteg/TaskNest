@@ -1,0 +1,50 @@
+---
+title: Começando
+description: Pré-requisitos, configuração de ambiente e primeiros passos.
+---
+
+## Pré-requisitos
+
+- [Bun](https://bun.sh) `>= 1.4.2`
+- [Docker](https://www.docker.com) + Docker Compose
+- PostgreSQL (local ou gerenciado)
+
+## Instalação
+
+```bash
+bun install
+```
+
+O `postinstall` gera os routers tipados (`tsc -b packages/api`) e o `env` tipado via Varlock.
+
+## Ambiente (.env)
+
+Cada app/pacote tem `.env.schema` versionado; segredos vivem nos `.env` (git-ignored):
+
+| Arquivo | Exemplo |
+| --- | --- |
+| `apps/web/.env` | `VITE_SERVER_URL=http://localhost:3000` |
+| `apps/server/.env` | `DATABASE_URL`, `BETTER_AUTH_SECRET`, `CORS_ORIGIN` |
+| `packages/db/.env` | `DATABASE_URL` para push/migrate/studio |
+
+O `bunfig.toml` desativa o autoload de env do Bun; o bootstrap do server (Varlock) carrega as vars.
+
+## Banco de dados
+
+```bash
+bun run db:push      # aplica schema (dev)
+bun run db:generate  # gera client/tipos
+bun run db:migrate   # roda migrations (prod)
+bun run db:studio    # UI do banco
+```
+
+## Desenvolvimento
+
+```bash
+bun run dev          # web + server (turbo)
+bun run dev:web      # só o frontend
+bun run dev:server   # só a API
+```
+
+- Web: `http://localhost:3001`
+- API: `http://localhost:3000`

@@ -1,0 +1,43 @@
+---
+title: Começando
+description: Pré-requisitos, instalação e rotas do frontend.
+---
+
+## Pré-requisitos
+
+- [Bun](https://bun.sh) `>= 1.4.2`
+- Backend rodando (ver [docs backend](http://localhost:4000/docs/getting-started))
+
+## Instalação
+
+```bash
+bun install
+```
+
+## Desenvolvimento
+
+```bash
+bun run dev:web     # só o frontend (porta 3001)
+bun run dev         # frontend + backend (turbo)
+```
+
+## Rotas
+
+| Rota | Descrição |
+| --- | --- |
+| `/` | Landing page |
+| `/login` | Login/cadastro |
+| `/dashboard` | Lista de projetos do usuário |
+| `/dashboard/$projectId` | Quadro de tarefas do projeto (Kanban) |
+| `/settings` | Configurações gerais |
+| `/settings/$projectId` | Configurações do projeto |
+
+## Estrutura de pastas
+
+```
+apps/web/src/
+├── routes/          # File-based routing (TanStack Router)
+├── components/      # Componentes específicos do app
+├── lib/             # Utilities, auth-client, orpc client
+└── utils/           # Helpers e config
+```

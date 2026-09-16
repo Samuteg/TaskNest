@@ -1,0 +1,42 @@
+---
+title: Página do Projeto
+description: Quadro Kanban, tarefas, drag & drop e filtros.
+---
+
+A página do projeto (`/dashboard/$projectId`) exibe o quadro de tarefas com visualização Kanban.
+
+## Colunas (Status)
+
+| Coluna | Valor | Cor |
+| --- | --- | --- |
+| A Fazer | `todo` | Cinza |
+| Em Andamento | `in_progress` | Azul |
+| Concluído | `done` | Verde |
+
+## Tarefa (Card)
+
+Cada card exibe:
+
+- **Título** — nome da tarefa
+- **Prioridade** — badge colorido (`low` / `medium` / `high` / `urgent`)
+- **Responsável** — avatar do assignee
+- **Prazo** — data de entrega (se definida)
+
+## Funcionalidades
+
+- **Criar tarefa** — botão "+" no topo da coluna
+- **Editar tarefa** — clique no card abre modal com detalhes
+- **Mover tarefa** — drag & drop entre colunas (atualiza status)
+- **Filtrar** — por responsável e prioridade
+- **Excluir** — conforme papel do usuário
+
+## Papéis e permissões
+
+| Ação | member | admin | owner |
+| --- | --- | --- | --- |
+| Ver tarefas | ✅ | ✅ | ✅ |
+| Criar tarefa | ✅ | ✅ | ✅ |
+| Editar tarefa | ✅ | ✅ | ✅ |
+| Excluir tarefa | ✅ | ✅ | ✅ |
+| Gerenciar membros | ❌ | ✅ | ✅ |
+| Excluir projeto | ❌ | ❌ | ✅ |
