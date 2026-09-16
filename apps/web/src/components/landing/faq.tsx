@@ -42,6 +42,14 @@ export function FAQ() {
 		setOpenIndex((prev) => (prev === idx ? null : idx));
 	}, []);
 
+	const handleToggle = useCallback(
+		(e: React.MouseEvent<HTMLButtonElement>) => {
+			const idx = Number(e.currentTarget.dataset.idx);
+			toggle(idx);
+		},
+		[toggle]
+	);
+
 	return (
 		<section className="border-b bg-background py-24">
 			<div className="container mx-auto max-w-4xl space-y-12 px-4">
@@ -73,7 +81,8 @@ export function FAQ() {
 								<button
 									aria-expanded={isOpen}
 									className="flex w-full items-center justify-between p-5 text-left"
-									onClick={() => toggle(idx)}
+									data-idx={idx}
+									onClick={handleToggle}
 									type="button"
 								>
 									<h3 className="pr-8 font-semibold text-sm sm:text-base">

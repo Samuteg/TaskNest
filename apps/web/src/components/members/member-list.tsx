@@ -7,6 +7,7 @@ import { Badge } from "@TaskNest/ui/components/badge";
 import { Button } from "@TaskNest/ui/components/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
@@ -55,6 +56,27 @@ export function MemberList({
 		})
 	);
 
+	const handleRoleChange = useCallback(
+		(userId: string, newRole: "admin" | "member") => {
+			updateRole.mutate({
+				projectId,
+				role: newRole,
+				userId,
+			});
+		},
+		[updateRole, projectId]
+	);
+
+	const handleRemove = useCallback(
+		(userId: string) => {
+			removeMember.mutate({
+				projectId,
+				userId,
+			});
+		},
+		[removeMember, projectId]
+	);
+
 	if (members.isLoading) {
 		return (
 			<p className="animate-pulse text-muted-foreground text-xs">
@@ -101,11 +123,7 @@ export function MemberList({
 									<RoleSelect
 										disabled={!isOwner || updateRole.isPending}
 										onChange={(newRole) => {
-											updateRole.mutate({
-												projectId,
-												role: newRole,
-												userId: m.userId,
-											});
+											handleRoleChange(m.userId, newRole);
 										}}
 										value={m.role}
 									/>
@@ -114,10 +132,7 @@ export function MemberList({
 											className="h-8 w-8 text-muted-foreground hover:text-destructive"
 											disabled={removeMember.isPending}
 											onClick={() => {
-												removeMember.mutate({
-													projectId,
-													userId: m.userId,
-												});
+												handleRemove(m.userId);
 											}}
 											size="icon"
 											variant="ghost"

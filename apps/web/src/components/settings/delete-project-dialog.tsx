@@ -20,6 +20,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
@@ -48,6 +49,10 @@ export function DeleteProjectDialog({
 			},
 		})
 	);
+
+	const handleDelete = useCallback(() => {
+		deleteProject.mutate({ projectId });
+	}, [deleteProject, projectId]);
 
 	return (
 		<Card className="border-destructive/30 bg-destructive/5">
@@ -81,7 +86,7 @@ export function DeleteProjectDialog({
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
 							<AlertDialogAction
 								disabled={deleteProject.isPending}
-								onClick={() => deleteProject.mutate({ projectId })}
+								onClick={handleDelete}
 								variant="destructive"
 							>
 								{deleteProject.isPending ? "Deleting..." : "Delete Project"}

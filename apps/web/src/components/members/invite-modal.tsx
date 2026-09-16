@@ -17,7 +17,7 @@ import {
 } from "@TaskNest/ui/components/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
@@ -48,19 +48,37 @@ export function InviteModal({ projectId }: { projectId: string }) {
 		})
 	);
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault();
-		if (!email.trim()) {
-			setError("Email address is required");
-			return;
+	const handleEmailChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+		[]
+	);
+
+	const handleRoleChange = useCallback((val: string | null) => {
+		if (val) {
+			setRole(val as "admin" | "member");
 		}
-		setError(null);
-		await invite.mutateAsync({
-			email: email.trim(),
-			projectId,
-			role,
-		});
-	};
+	}, []);
+
+	const handleCancel = useCallback(() => {
+		setOpen(false);
+	}, []);
+
+	const handleSubmit = useCallback(
+		async (e: FormEvent) => {
+			e.preventDefault();
+			if (!email.trim()) {
+				setError("Email address is required");
+				return;
+			}
+			setError(null);
+			await invite.mutateAsync({
+				email: email.trim(),
+				projectId,
+				role,
+			});
+		},
+		[email, projectId, role, invite]
+	);
 
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>
@@ -81,7 +99,7 @@ export function InviteModal({ projectId }: { projectId: string }) {
 						<Label htmlFor="invite-email">Email Address</Label>
 						<Input
 							id="invite-email"
-							onChange={(e) => setEmail(e.target.value)}
+							onChange={handleEmailChange}
 							placeholder="colleague@example.com"
 							required
 							type="email"
@@ -92,14 +110,7 @@ export function InviteModal({ projectId }: { projectId: string }) {
 
 					<div className="space-y-1">
 						<Label>Project Role</Label>
-						<Select
-							onValueChange={(val) => {
-								if (val) {
-									setRole(val as "admin" | "member");
-								}
-							}}
-							value={role}
-						>
+						<Select onValueChange={handleRoleChange} value={role}>
 							<SelectTrigger className="w-full">
 								<SelectValue />
 							</SelectTrigger>
@@ -111,11 +122,7 @@ export function InviteModal({ projectId }: { projectId: string }) {
 					</div>
 
 					<div className="flex justify-end gap-2 pt-2">
-						<Button
-							onClick={() => setOpen(false)}
-							type="button"
-							variant="outline"
-						>
+						<Button onClick={handleCancel} type="button" variant="outline">
 							Cancel
 						</Button>
 						<Button disabled={invite.isPending} type="submit">

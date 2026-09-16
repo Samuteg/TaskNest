@@ -12,15 +12,15 @@ import {
 } from "lucide-react";
 import { useCallback, useState } from "react";
 
-type DemoTask = {
-	id: string;
-	title: string;
-	tag: string;
-	priority: "urgent" | "high" | "medium" | "low";
-	status: "todo" | "in_progress" | "done";
+interface DemoTask {
 	assignee: string;
 	dueDate: string;
-};
+	id: string;
+	priority: "urgent" | "high" | "medium" | "low";
+	status: "todo" | "in_progress" | "done";
+	tag: string;
+	title: string;
+}
 
 const INITIAL_TASKS: DemoTask[] = [
 	{
@@ -81,6 +81,27 @@ export function InteractivePreview() {
 		[]
 	);
 
+	const handleFilterChange = useCallback((filter: string) => {
+		setActiveFilter(filter);
+	}, []);
+
+	const handleFilterClick = useCallback(
+		(e: React.MouseEvent<HTMLButtonElement>) => {
+			handleFilterChange(e.currentTarget.dataset.filter ?? "all");
+		},
+		[handleFilterChange]
+	);
+
+	const handleMoveClick = useCallback(
+		(e: React.MouseEvent<HTMLButtonElement>) => {
+			const { taskId, status } = e.currentTarget.dataset;
+			if (taskId && status) {
+				moveTask(taskId, status as "todo" | "in_progress" | "done");
+			}
+		},
+		[moveTask]
+	);
+
 	const filteredTasks = tasks.filter((t) =>
 		activeFilter === "all"
 			? true
@@ -126,8 +147,9 @@ export function InteractivePreview() {
 										? "bg-primary text-primary-foreground shadow-xs"
 										: "bg-muted/60 text-muted-foreground hover:bg-muted"
 								}`}
+								data-filter={filter}
 								key={filter}
-								onClick={() => setActiveFilter(filter)}
+								onClick={handleFilterClick}
 								type="button"
 							>
 								{filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -191,7 +213,9 @@ export function InteractivePreview() {
 										</div>
 										<button
 											className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 font-medium text-[10px] text-primary transition-colors hover:bg-primary/20"
-											onClick={() => moveTask(task.id, "in_progress")}
+											data-status="in_progress"
+											data-task-id={task.id}
+											onClick={handleMoveClick}
 											title="Move to In Progress"
 											type="button"
 										>
@@ -263,7 +287,9 @@ export function InteractivePreview() {
 										<div className="flex items-center gap-1">
 											<button
 												className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-0.5 font-medium text-[10px] text-green-600 transition-colors hover:bg-green-500/20 dark:text-green-400"
-												onClick={() => moveTask(task.id, "done")}
+												data-status="done"
+												data-task-id={task.id}
+												onClick={handleMoveClick}
 												title="Mark Complete"
 												type="button"
 											>
@@ -329,7 +355,9 @@ export function InteractivePreview() {
 										</div>
 										<button
 											className="text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-											onClick={() => moveTask(task.id, "in_progress")}
+											data-status="in_progress"
+											data-task-id={task.id}
+											onClick={handleMoveClick}
 											title="Reopen task"
 											type="button"
 										>

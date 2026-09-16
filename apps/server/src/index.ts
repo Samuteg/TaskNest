@@ -46,7 +46,7 @@ const fastify = Fastify({
 
 fastify.register(fastifyCors, baseCorsConfig);
 
-fastify.register(async (rpcApp) => {
+fastify.register((rpcApp) => {
 	// Fully utilize oRPC features by letting oRPC parse the request body.
 	rpcApp.addContentTypeParser("*", (_, _payload, done) => {
 		done(null, undefined);
@@ -80,11 +80,11 @@ fastify.route({
 		try {
 			const url = new URL(request.url, `http://${request.headers.host}`);
 			const headers = new Headers();
-			Object.entries(request.headers).forEach(([key, value]) => {
+			for (const [key, value] of Object.entries(request.headers)) {
 				if (value) {
 					headers.append(key, value.toString());
 				}
-			});
+			}
 			const req = new Request(url.toString(), {
 				body: request.body ? JSON.stringify(request.body) : undefined,
 				headers,
@@ -92,7 +92,9 @@ fastify.route({
 			});
 			const response = await auth.handler(req);
 			reply.status(response.status);
-			response.headers.forEach((value, key) => reply.header(key, value));
+			for (const [key, value] of response.headers) {
+				reply.header(key, value);
+			}
 			reply.send(response.body ? await response.text() : null);
 		} catch (error) {
 			fastify.log.error({ err: error }, "Authentication Error:");

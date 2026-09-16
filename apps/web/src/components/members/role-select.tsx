@@ -5,6 +5,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@TaskNest/ui/components/select";
+import { useCallback } from "react";
 
 export function RoleSelect({
 	value,
@@ -15,16 +16,17 @@ export function RoleSelect({
 	onChange: (role: "admin" | "member") => void;
 	disabled?: boolean;
 }) {
+	const handleValueChange = useCallback(
+		(val: string | null) => {
+			if (val) {
+				onChange(val as "admin" | "member");
+			}
+		},
+		[onChange]
+	);
+
 	return (
-		<Select
-			disabled={disabled}
-			onValueChange={(val) => {
-				if (val) {
-					onChange(val as "admin" | "member");
-				}
-			}}
-			value={value}
-		>
+		<Select disabled={disabled} onValueChange={handleValueChange} value={value}>
 			<SelectTrigger className="h-8 w-28 text-xs">
 				<SelectValue />
 			</SelectTrigger>

@@ -69,6 +69,93 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["apps/server/src/env.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConsistentTypeDefinitions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/ui/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "useSemanticElements": "off",
+            "useKeyWithClickEvents": "off",
+            "noNoninteractiveElementInteractions": "off"
+          },
+          "style": {
+            "noExportedImports": "off"
+          },
+          "suspicious": {
+            "noLeakedRender": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/env.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConsistentTypeDefinitions": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/components/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noJsxPropsBind": "off",
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/utils/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noParametersOnlyUsedInRecursion": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/routes/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noJsxPropsBind": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useConsistentTypeDefinitions": "off",
+            "noExportedImports": "off"
+          },
+          "performance": {
+            "noNamespaceImport": "off",
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"

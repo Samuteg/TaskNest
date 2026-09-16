@@ -12,7 +12,7 @@ import { Textarea } from "@TaskNest/ui/components/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
@@ -50,18 +50,32 @@ export function ProjectCreateModal() {
 		})
 	);
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault();
-		if (!name.trim()) {
-			setError("Project name is required");
-			return;
-		}
-		setError(null);
-		await createProject.mutateAsync({
-			description: description.trim() || undefined,
-			name: name.trim(),
-		});
-	};
+	const handleNameChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
+		[]
+	);
+
+	const handleDescriptionChange = useCallback(
+		(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+			setDescription(e.target.value),
+		[]
+	);
+
+	const handleSubmit = useCallback(
+		async (e: FormEvent) => {
+			e.preventDefault();
+			if (!name.trim()) {
+				setError("Project name is required");
+				return;
+			}
+			setError(null);
+			await createProject.mutateAsync({
+				description: description.trim() || undefined,
+				name: name.trim(),
+			});
+		},
+		[name, description, createProject]
+	);
 
 	return (
 		<Dialog onOpenChange={setOpen} open={open}>
@@ -82,7 +96,7 @@ export function ProjectCreateModal() {
 						<Label htmlFor="project-name">Project Name</Label>
 						<Input
 							id="project-name"
-							onChange={(e) => setName(e.target.value)}
+							onChange={handleNameChange}
 							placeholder="e.g. Website Redesign"
 							required
 							value={name}
@@ -94,7 +108,7 @@ export function ProjectCreateModal() {
 						<Label htmlFor="project-desc">Description (optional)</Label>
 						<Textarea
 							id="project-desc"
-							onChange={(e) => setDescription(e.target.value)}
+							onChange={handleDescriptionChange}
 							placeholder="Brief description of the project"
 							rows={3}
 							value={description}

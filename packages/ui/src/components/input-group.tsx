@@ -6,6 +6,7 @@ import { Textarea } from "@TaskNest/ui/components/textarea";
 import { cn } from "@TaskNest/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+import { useCallback } from "react";
 
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 	return (
@@ -52,21 +53,21 @@ function InputGroupAddon({
 	align = "inline-start",
 	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
+	const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+		if ((e.target as HTMLElement).closest("button")) {
+			return;
+		}
+		e.currentTarget.parentElement
+			?.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")
+			?.focus();
+	}, []);
+
 	return (
 		<div
 			className={cn(inputGroupAddonVariants({ align }), className)}
 			data-align={align}
 			data-slot="input-group-addon"
-			onClick={(e) => {
-				if ((e.target as HTMLElement).closest("button")) {
-					return;
-				}
-				e.currentTarget.parentElement
-					?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-						"input, textarea"
-					)
-					?.focus();
-			}}
+			onClick={handleClick}
 			role="group"
 			{...props}
 		/>

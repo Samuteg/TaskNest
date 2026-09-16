@@ -16,7 +16,7 @@ import {
 } from "@TaskNest/ui/components/select";
 import { Textarea } from "@TaskNest/ui/components/textarea";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { client, orpc } from "@/utils/orpc";
@@ -59,35 +59,83 @@ export function TaskCreateModal({
 		})
 	);
 
-	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault();
-		if (!title.trim()) {
-			setError("Task title is required");
-			return;
+	const handleOpenChange = useCallback(
+		(open: boolean) => {
+			if (!open) {
+				onClose();
+			}
+		},
+		[onClose]
+	);
+
+	const handleTitleChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value),
+		[]
+	);
+
+	const handleDescriptionChange = useCallback(
+		(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+			setDescription(e.target.value),
+		[]
+	);
+
+	const handlePriorityChange = useCallback((val: string | null) => {
+		if (val) {
+			setPriority(val as "low" | "medium" | "high" | "urgent");
 		}
-		setError(null);
-		const created = await createTask.mutateAsync({
-			assigneeId: assigneeId || undefined,
-			description: description.trim() || undefined,
-			dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+	}, []);
+
+	const handleDueDateChange = useCallback(
+		(e: React.ChangeEvent<HTMLInputElement>) => setDueDate(e.target.value),
+		[]
+	);
+
+	const handleAssigneeChange = useCallback((val: string | null) => {
+		setAssigneeId(val === "unassigned" ? undefined : (val ?? undefined));
+	}, []);
+
+	const handleSubmit = useCallback(
+		async (e: FormEvent) => {
+			e.preventDefault();
+			if (!title.trim()) {
+				setError("Task title is required");
+				return;
+			}
+			setError(null);
+			const created = await createTask.mutateAsync({
+				assigneeId: assigneeId || undefined,
+				description: description.trim() || undefined,
+				dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+				priority,
+				projectId,
+				title: title.trim(),
+			});
+
+			if (defaultStatus !== "todo") {
+				await client.tasks.updateStatus({
+					status: defaultStatus,
+					taskId: created.id,
+				});
+				queryClient.invalidateQueries({
+					queryKey: orpc.tasks.list.queryKey({ input: { projectId } }),
+				});
+			}
+		},
+		[
+			title,
+			description,
+			assigneeId,
+			dueDate,
 			priority,
 			projectId,
-			title: title.trim(),
-		});
-
-		if (defaultStatus !== "todo") {
-			await client.tasks.updateStatus({
-				status: defaultStatus,
-				taskId: created.id,
-			});
-			queryClient.invalidateQueries({
-				queryKey: orpc.tasks.list.queryKey({ input: { projectId } }),
-			});
-		}
-	};
+			defaultStatus,
+			createTask,
+			queryClient,
+		]
+	);
 
 	return (
-		<Dialog onOpenChange={(open) => !open && onClose()} open>
+		<Dialog onOpenChange={handleOpenChange} open>
 			<DialogContent className="sm:max-w-[480px]">
 				<DialogHeader>
 					<DialogTitle>Create Task</DialogTitle>
@@ -97,7 +145,7 @@ export function TaskCreateModal({
 						<Label htmlFor="task-title">Title</Label>
 						<Input
 							id="task-title"
-							onChange={(e) => setTitle(e.target.value)}
+							onChange={handleTitleChange}
 							placeholder="e.g. Implement authentication flow"
 							required
 							value={title}
@@ -109,7 +157,7 @@ export function TaskCreateModal({
 						<Label htmlFor="task-desc">Description (optional)</Label>
 						<Textarea
 							id="task-desc"
-							onChange={(e) => setDescription(e.target.value)}
+							onChange={handleDescriptionChange}
 							placeholder="Detailed description of the task"
 							rows={3}
 							value={description}
@@ -119,14 +167,7 @@ export function TaskCreateModal({
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1">
 							<Label>Priority</Label>
-							<Select
-								onValueChange={(val) => {
-									if (val) {
-										setPriority(val as "low" | "medium" | "high" | "urgent");
-									}
-								}}
-								value={priority}
-							>
+							<Select onValueChange={handlePriorityChange} value={priority}>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
@@ -143,7 +184,7 @@ export function TaskCreateModal({
 							<Label htmlFor="due-date">Due Date (optional)</Label>
 							<Input
 								id="due-date"
-								onChange={(e) => setDueDate(e.target.value)}
+								onChange={handleDueDateChange}
 								type="date"
 								value={dueDate}
 							/>
@@ -153,11 +194,7 @@ export function TaskCreateModal({
 					<div className="space-y-1">
 						<Label>Assignee (optional)</Label>
 						<Select
-							onValueChange={(val) => {
-								setAssigneeId(
-									val === "unassigned" ? undefined : (val ?? undefined)
-								);
-							}}
+							onValueChange={handleAssigneeChange}
 							value={assigneeId ?? "unassigned"}
 						>
 							<SelectTrigger className="w-full">

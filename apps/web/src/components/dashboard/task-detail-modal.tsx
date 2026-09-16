@@ -22,6 +22,7 @@ import {
 } from "@TaskNest/ui/components/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Trash2 } from "lucide-react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { orpc } from "@/utils/orpc";
 
@@ -109,8 +110,43 @@ export function TaskDetailModal({
 
 	const priority = priorityBadges[task.priority] ?? priorityBadges.medium;
 
+	const handleOpenChange = useCallback(
+		(open: boolean) => {
+			if (!open) {
+				onClose();
+			}
+		},
+		[onClose]
+	);
+
+	const handleStatusChange = useCallback(
+		(val: string | null) => {
+			if (val) {
+				updateStatus.mutate({
+					status: val as "todo" | "in_progress" | "done",
+					taskId: task.id,
+				});
+			}
+		},
+		[updateStatus, task.id]
+	);
+
+	const handleAssigneeChange = useCallback(
+		(val: string | null) => {
+			updateTask.mutate({
+				assigneeId: val === "unassigned" ? null : (val ?? null),
+				taskId: task.id,
+			});
+		},
+		[updateTask, task.id]
+	);
+
+	const handleDelete = useCallback(() => {
+		deleteTask.mutate({ taskId: task.id });
+	}, [deleteTask, task.id]);
+
 	return (
-		<Dialog onOpenChange={(open) => !open && onClose()} open>
+		<Dialog onOpenChange={handleOpenChange} open>
 			<DialogContent className="sm:max-w-[480px]">
 				<DialogHeader className="flex flex-row items-center justify-between space-y-0">
 					<DialogTitle className="font-semibold text-base">
@@ -138,17 +174,7 @@ export function TaskDetailModal({
 					<div className="grid grid-cols-2 gap-3">
 						<div className="space-y-1">
 							<Label className="text-muted-foreground text-xs">Status</Label>
-							<Select
-								onValueChange={(val) => {
-									if (val) {
-										updateStatus.mutate({
-											status: val as "todo" | "in_progress" | "done",
-											taskId: task.id,
-										});
-									}
-								}}
-								value={task.status}
-							>
+							<Select onValueChange={handleStatusChange} value={task.status}>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
@@ -163,12 +189,7 @@ export function TaskDetailModal({
 						<div className="space-y-1">
 							<Label className="text-muted-foreground text-xs">Assignee</Label>
 							<Select
-								onValueChange={(val) => {
-									updateTask.mutate({
-										assigneeId: val === "unassigned" ? null : (val ?? null),
-										taskId: task.id,
-									});
-								}}
+								onValueChange={handleAssigneeChange}
 								value={task.assigneeId ?? "unassigned"}
 							>
 								<SelectTrigger className="w-full">
@@ -214,7 +235,7 @@ export function TaskDetailModal({
 						<Button
 							className="gap-1.5"
 							disabled={deleteTask.isPending}
-							onClick={() => deleteTask.mutate({ taskId: task.id })}
+							onClick={handleDelete}
 							size="sm"
 							variant="destructive"
 						>
