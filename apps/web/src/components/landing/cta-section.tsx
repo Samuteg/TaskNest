@@ -30,7 +30,7 @@ export function CtaSection() {
 
 						<div className="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
 							<div className="flex-1">
-								<AuthCta className="h-11 w-full gap-2 font-semibold text-sm" />
+								<AuthCta className="h-11 w-full gap-2 font-semibold text-sm shadow-md" />
 							</div>
 							<a
 								className="flex-1"
