@@ -1,13 +1,11 @@
 import { Avatar, AvatarFallback } from "@TaskNest/ui/components/avatar";
 import { Badge } from "@TaskNest/ui/components/badge";
-import { Button } from "@TaskNest/ui/components/button";
 import { Card, CardContent } from "@TaskNest/ui/components/card";
 import {
 	ArrowRight,
 	Calendar,
 	CheckCircle2,
 	Clock,
-	Plus,
 	Sparkles,
 } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -68,6 +66,8 @@ const priorityBadges = {
 	urgent: "bg-red-500/10 text-red-500 border-red-500/20",
 };
 
+const FILTERS = ["all", "Frontend", "Backend", "Security", "Database"] as const;
+
 export function InteractivePreview() {
 	const [tasks, setTasks] = useState<DemoTask[]>(INITIAL_TASKS);
 	const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -81,15 +81,11 @@ export function InteractivePreview() {
 		[]
 	);
 
-	const handleFilterChange = useCallback((filter: string) => {
-		setActiveFilter(filter);
-	}, []);
-
 	const handleFilterClick = useCallback(
 		(e: React.MouseEvent<HTMLButtonElement>) => {
-			handleFilterChange(e.currentTarget.dataset.filter ?? "all");
+			setActiveFilter(e.currentTarget.dataset.filter ?? "all");
 		},
-		[handleFilterChange]
+		[]
 	);
 
 	const handleMoveClick = useCallback(
@@ -115,8 +111,7 @@ export function InteractivePreview() {
 	const doneList = filteredTasks.filter((t) => t.status === "done");
 
 	return (
-		<div className="relative mx-auto w-full max-w-5xl rounded-2xl border bg-card/80 p-4 shadow-2xl backdrop-blur-md md:p-6">
-			{/* Top Header Bar */}
+		<div className="relative mx-auto w-full max-w-5xl rounded-2xl border border-border/60 bg-card/80 p-4 shadow-2xl backdrop-blur-md md:p-6">
 			<div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="flex items-center gap-3">
 					<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -132,36 +127,31 @@ export function InteractivePreview() {
 							</Badge>
 						</div>
 						<p className="text-muted-foreground text-xs">
-							Interactive Live Demo — Click arrows to shift task statuses
+							Live demo — click arrows to move tasks between columns
 						</p>
 					</div>
 				</div>
 
-				{/* Filter tags */}
 				<div className="flex flex-wrap items-center gap-1.5">
-					{["all", "Frontend", "Backend", "Security", "Database"].map(
-						(filter) => (
-							<button
-								className={`rounded-full px-2.5 py-1 font-medium text-xs transition-all ${
-									activeFilter === filter
-										? "bg-primary text-primary-foreground shadow-xs"
-										: "bg-muted/60 text-muted-foreground hover:bg-muted"
-								}`}
-								data-filter={filter}
-								key={filter}
-								onClick={handleFilterClick}
-								type="button"
-							>
-								{filter.charAt(0).toUpperCase() + filter.slice(1)}
-							</button>
-						)
-					)}
+					{FILTERS.map((filter) => (
+						<button
+							className={`rounded-full px-2.5 py-1 font-medium text-xs transition-all ${
+								activeFilter === filter
+									? "bg-primary text-primary-foreground shadow-xs"
+									: "bg-muted/60 text-muted-foreground hover:bg-muted"
+							}`}
+							data-filter={filter}
+							key={filter}
+							onClick={handleFilterClick}
+							type="button"
+						>
+							{filter.charAt(0).toUpperCase() + filter.slice(1)}
+						</button>
+					))}
 				</div>
 			</div>
 
-			{/* 3-Column Board */}
 			<div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-				{/* TO DO COLUMN */}
 				<div className="flex flex-col rounded-xl border border-border/60 bg-muted/20 p-3">
 					<div className="flex items-center justify-between pb-3">
 						<div className="flex items-center gap-2">
@@ -173,9 +163,6 @@ export function InteractivePreview() {
 								{todoList.length}
 							</Badge>
 						</div>
-						<Button className="h-6 w-6" size="icon" variant="ghost">
-							<Plus className="h-3.5 w-3.5" />
-						</Button>
 					</div>
 
 					<div className="flex flex-1 flex-col gap-2.5">
@@ -212,11 +199,11 @@ export function InteractivePreview() {
 											</span>
 										</div>
 										<button
+											aria-label={`Move "${task.title}" to In Progress`}
 											className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 font-medium text-[10px] text-primary transition-colors hover:bg-primary/20"
 											data-status="in_progress"
 											data-task-id={task.id}
 											onClick={handleMoveClick}
-											title="Move to In Progress"
 											type="button"
 										>
 											<span>Start</span>
@@ -234,11 +221,10 @@ export function InteractivePreview() {
 					</div>
 				</div>
 
-				{/* IN PROGRESS COLUMN */}
 				<div className="flex flex-col rounded-xl border border-blue-500/20 bg-blue-500/5 p-3">
 					<div className="flex items-center justify-between pb-3">
 						<div className="flex items-center gap-2">
-							<span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+							<span className="h-2 w-2 animate-pulse rounded-full bg-blue-500 motion-reduce:animate-none" />
 							<h4 className="font-semibold text-blue-600 text-xs uppercase tracking-wider dark:text-blue-400">
 								In Progress
 							</h4>
@@ -246,9 +232,6 @@ export function InteractivePreview() {
 								{inProgressList.length}
 							</Badge>
 						</div>
-						<Button className="h-6 w-6" size="icon" variant="ghost">
-							<Plus className="h-3.5 w-3.5" />
-						</Button>
 					</div>
 
 					<div className="flex flex-1 flex-col gap-2.5">
@@ -284,19 +267,17 @@ export function InteractivePreview() {
 												{task.dueDate}
 											</span>
 										</div>
-										<div className="flex items-center gap-1">
-											<button
-												className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-0.5 font-medium text-[10px] text-green-600 transition-colors hover:bg-green-500/20 dark:text-green-400"
-												data-status="done"
-												data-task-id={task.id}
-												onClick={handleMoveClick}
-												title="Mark Complete"
-												type="button"
-											>
-												<CheckCircle2 className="h-3 w-3" />
-												<span>Done</span>
-											</button>
-										</div>
+										<button
+											aria-label={`Mark "${task.title}" as Done`}
+											className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-0.5 font-medium text-[10px] text-green-600 transition-colors hover:bg-green-500/20 dark:text-green-400"
+											data-status="done"
+											data-task-id={task.id}
+											onClick={handleMoveClick}
+											type="button"
+										>
+											<CheckCircle2 className="h-3 w-3" />
+											<span>Done</span>
+										</button>
 									</div>
 								</CardContent>
 							</Card>
@@ -304,7 +285,6 @@ export function InteractivePreview() {
 					</div>
 				</div>
 
-				{/* DONE COLUMN */}
 				<div className="flex flex-col rounded-xl border border-green-500/20 bg-green-500/5 p-3">
 					<div className="flex items-center justify-between pb-3">
 						<div className="flex items-center gap-2">
@@ -316,9 +296,6 @@ export function InteractivePreview() {
 								{doneList.length}
 							</Badge>
 						</div>
-						<Button className="h-6 w-6" size="icon" variant="ghost">
-							<Plus className="h-3.5 w-3.5" />
-						</Button>
 					</div>
 
 					<div className="flex flex-1 flex-col gap-2.5">
@@ -354,11 +331,11 @@ export function InteractivePreview() {
 											</span>
 										</div>
 										<button
+											aria-label={`Reopen "${task.title}"`}
 											className="text-[10px] text-muted-foreground transition-colors hover:text-foreground"
 											data-status="in_progress"
 											data-task-id={task.id}
 											onClick={handleMoveClick}
-											title="Reopen task"
 											type="button"
 										>
 											Reopen

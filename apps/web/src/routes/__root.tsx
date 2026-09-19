@@ -28,11 +28,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 	head: () => ({
 		meta: [
 			{
-				title: "TaskNest",
+				title: "TaskNest — Real-time Kanban for engineering teams",
 			},
 			{
 				name: "description",
-				content: "TaskNest is a web application",
+				content:
+					"Open-source task manager for engineering teams. Real-time Kanban sync, role-based access, and self-hostable with Docker.",
 			},
 		],
 		links: [

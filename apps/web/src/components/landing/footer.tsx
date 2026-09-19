@@ -1,6 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { Code2, FolderKanban } from "lucide-react";
 
+const PRODUCT_LINKS = [
+	{ anchor: "/#features", label: "Features" },
+	{ anchor: "/#self-host", label: "Self-host" },
+	{ anchor: "/#faq", label: "FAQ" },
+] as const;
+
 export function Footer() {
 	return (
 		<footer className="border-t bg-card py-16">
@@ -12,8 +18,8 @@ export function Footer() {
 							<span className="font-bold text-lg">TaskNest</span>
 						</Link>
 						<p className="max-w-sm text-muted-foreground text-xs leading-relaxed">
-							Task manager for engineering teams. Built on React 19, TanStack,
-							and PostgreSQL. Open-source and self-hostable.
+							Real-time Kanban for engineering teams. Open-source,
+							self-hostable, and free forever.
 						</p>
 					</div>
 
@@ -22,30 +28,16 @@ export function Footer() {
 							Product
 						</h4>
 						<ul className="space-y-2.5 text-muted-foreground text-xs">
-							<li>
-								<Link
-									className="transition-colors hover:text-foreground"
-									to="/"
-								>
-									Features
-								</Link>
-							</li>
-							<li>
-								<Link
-									className="transition-colors hover:text-foreground"
-									to="/"
-								>
-									Pricing
-								</Link>
-							</li>
-							<li>
-								<Link
-									className="transition-colors hover:text-foreground"
-									to="/"
-								>
-									FAQ
-								</Link>
-							</li>
+							{PRODUCT_LINKS.map((link) => (
+								<li key={link.anchor}>
+									<a
+										className="transition-colors hover:text-foreground"
+										href={link.anchor}
+									>
+										{link.label}
+									</a>
+								</li>
+							))}
 						</ul>
 					</div>
 
@@ -67,7 +59,7 @@ export function Footer() {
 							</li>
 							<li>
 								<a
-									className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+									className="transition-colors hover:text-foreground"
 									href="https://github.com/Samuteg/TaskNest/issues"
 									rel="noopener noreferrer"
 									target="_blank"
@@ -77,8 +69,8 @@ export function Footer() {
 							</li>
 							<li>
 								<a
-									className="flex items-center gap-1.5 transition-colors hover:text-foreground"
-									href="https://github.com/Samuteg/TaskNest"
+									className="transition-colors hover:text-foreground"
+									href="https://github.com/Samuteg/TaskNest/issues"
 									rel="noopener noreferrer"
 									target="_blank"
 								>

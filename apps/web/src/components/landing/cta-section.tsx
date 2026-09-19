@@ -1,51 +1,58 @@
 import { Button } from "@TaskNest/ui/components/button";
-import { ArrowRight, FolderKanban, ShieldCheck } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight, Code2, FolderKanban } from "lucide-react";
 
 export function CtaSection() {
 	return (
-		<section className="py-24">
+		<section className="py-20 md:py-28">
 			<div className="container mx-auto max-w-5xl px-4">
-				<div className="relative overflow-hidden rounded-3xl border bg-primary text-primary-foreground">
-					<div className="absolute top-0 left-0 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10 blur-3xl" />
-					<div className="absolute right-0 bottom-0 h-64 w-64 translate-x-1/2 translate-y-1/2 rounded-full bg-black/20 blur-3xl" />
+				<div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute top-0 left-1/2 -z-0 h-64 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl"
+					/>
 
-					<div className="relative z-10 flex flex-col items-center space-y-8 px-8 py-16 text-center md:py-24">
-						<div className="flex items-center justify-center gap-3">
-							<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
-								<FolderKanban className="h-6 w-6" />
-							</div>
+					<div className="relative z-10 flex flex-col items-center space-y-8 px-8 py-16 text-center md:py-20">
+						<div className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+							<FolderKanban className="h-6 w-6" />
 						</div>
 
-						<h2 className="max-w-2xl font-extrabold text-3xl tracking-tight sm:text-4xl md:text-5xl">
-							TaskNest is open-source
-						</h2>
+						<div className="space-y-3">
+							<h2 className="font-extrabold text-3xl tracking-tight sm:text-4xl md:text-5xl">
+								Ready to ship faster?
+							</h2>
+							<p className="mx-auto max-w-xl text-muted-foreground text-sm sm:text-base">
+								Try the demo in seconds, or clone the repo and self-host in
+								under 2 minutes with Docker Compose.
+							</p>
+						</div>
 
-						<p className="max-w-xl text-sm opacity-90 sm:text-base">
-							Clone the repo, configure your PostgreSQL database, and run it
-							yourself. Docker Compose included — under 2 minutes to get
-							running.
-						</p>
-
-						<div className="flex w-full max-w-sm flex-col gap-3 pt-2 sm:flex-row">
+						<div className="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
+							<Link className="flex-1" to="/login">
+								<Button className="h-11 w-full gap-2 font-semibold text-sm shadow-md">
+									<span>Try the Demo</span>
+									<ArrowRight className="h-4 w-4" />
+								</Button>
+							</Link>
 							<a
+								className="flex-1"
 								href="https://github.com/Samuteg/TaskNest"
 								rel="noopener noreferrer"
 								target="_blank"
 							>
 								<Button
-									className="h-12 w-full gap-2 bg-white font-semibold text-primary text-sm shadow-lg hover:bg-white/90"
-									size="lg"
+									className="h-11 w-full gap-2 font-semibold text-sm"
+									variant="outline"
 								>
+									<Code2 className="h-4 w-4" />
 									<span>View on GitHub</span>
-									<ArrowRight className="h-4 w-4" />
 								</Button>
 							</a>
 						</div>
 
-						<div className="flex items-center gap-2 pt-4 font-medium text-xs opacity-80">
-							<ShieldCheck className="h-4 w-4" />
-							<span>Docker Compose · PostgreSQL · No vendor lock-in</span>
-						</div>
+						<p className="text-muted-foreground text-xs">
+							MIT license · Docker Compose included · No vendor lock-in
+						</p>
 					</div>
 				</div>
 			</div>
