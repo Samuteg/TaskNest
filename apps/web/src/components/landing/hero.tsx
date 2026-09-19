@@ -1,7 +1,7 @@
 import { Button } from "@TaskNest/ui/components/button";
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, Code2 } from "lucide-react";
+import { Code2 } from "lucide-react";
 
+import { AuthCta } from "./auth-cta";
 import { InteractivePreview } from "./interactive-preview";
 
 export function Hero() {
@@ -35,15 +35,7 @@ export function Hero() {
 					</p>
 
 					<div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
-						<Link to="/login">
-							<Button
-								className="h-11 gap-2 px-8 font-semibold text-sm shadow-md"
-								size="lg"
-							>
-								<span>Try the Demo</span>
-								<ArrowRight className="h-4 w-4" />
-							</Button>
-						</Link>
+						<AuthCta />
 						<a
 							href="https://github.com/Samuteg/TaskNest"
 							rel="noopener noreferrer"

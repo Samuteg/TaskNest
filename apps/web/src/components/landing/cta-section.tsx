@@ -1,6 +1,7 @@
 import { Button } from "@TaskNest/ui/components/button";
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, Code2, FolderKanban } from "lucide-react";
+import { Code2, FolderKanban } from "lucide-react";
+
+import { AuthCta } from "./auth-cta";
 
 export function CtaSection() {
 	return (
@@ -28,12 +29,9 @@ export function CtaSection() {
 						</div>
 
 						<div className="flex w-full max-w-sm flex-col gap-3 sm:flex-row">
-							<Link className="flex-1" to="/login">
-								<Button className="h-11 w-full gap-2 font-semibold text-sm shadow-md">
-									<span>Try the Demo</span>
-									<ArrowRight className="h-4 w-4" />
-								</Button>
-							</Link>
+							<div className="flex-1">
+								<AuthCta />
+							</div>
 							<a
 								className="flex-1"
 								href="https://github.com/Samuteg/TaskNest"

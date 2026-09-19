@@ -2,6 +2,7 @@ import { Button } from "@TaskNest/ui/components/button";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Code2, FolderKanban } from "lucide-react";
 
+import { AuthCta } from "./landing/auth-cta";
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
 
@@ -25,14 +26,17 @@ export default function Header() {
 
 	return (
 		<header className="sticky top-0 z-40 border-border/50 border-b bg-background/90 backdrop-blur-sm">
-			<div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-				<Link className="flex items-center gap-2 font-bold text-base" to="/">
+			<div className="container mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4">
+				<Link
+					className="flex items-center gap-2 justify-self-start font-bold text-base"
+					to="/"
+				>
 					<FolderKanban className="h-5 w-5 text-primary" />
 					<span>TaskNest</span>
 				</Link>
 
-				{isLanding && (
-					<nav className="hidden items-center gap-6 md:flex">
+				{isLanding ? (
+					<nav className="hidden items-center gap-6 justify-self-center md:flex">
 						{NAV_LINKS.map((link) => (
 							<a
 								className="text-muted-foreground text-sm transition-colors hover:text-foreground"
@@ -43,9 +47,11 @@ export default function Header() {
 							</a>
 						))}
 					</nav>
+				) : (
+					<div />
 				)}
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 justify-self-end">
 					{isLanding && (
 						<>
 							<a
@@ -58,9 +64,7 @@ export default function Header() {
 									<Code2 className="h-4 w-4" />
 								</Button>
 							</a>
-							<Link to="/login">
-								<Button size="sm">Try Demo</Button>
-							</Link>
+							<AuthCta compact />
 						</>
 					)}
 					<ModeToggle />
