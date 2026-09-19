@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
 	index,
 	pgEnum,
@@ -50,14 +49,3 @@ export const task = pgTable(
 		index("task_status_idx").on(table.status),
 	]
 );
-
-export const taskRelations = relations(task, ({ one }) => ({
-	assignee: one(user, {
-		fields: [task.assigneeId],
-		references: [user.id],
-	}),
-	project: one(project, {
-		fields: [task.projectId],
-		references: [project.id],
-	}),
-}));
