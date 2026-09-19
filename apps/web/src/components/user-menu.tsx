@@ -44,6 +44,12 @@ function MenuDropdown() {
 					<DropdownMenuLabel>My Account</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem>{session.user.email}</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => navigate({ to: "/dashboard" })}>
+						Dashboard
+					</DropdownMenuItem>
+					<DropdownMenuItem onClick={() => navigate({ to: "/settings" })}>
+						Account Settings
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => {
 							authClient.signOut({
