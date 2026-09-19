@@ -35,7 +35,7 @@ export function Hero() {
 					</p>
 
 					<div className="flex flex-col items-center justify-center gap-3 pt-2 sm:flex-row">
-						<AuthCta />
+						<AuthCta className="h-11 gap-2 px-8 font-semibold text-sm shadow-md" />
 						<a
 							href="https://github.com/Samuteg/TaskNest"
 							rel="noopener noreferrer"
