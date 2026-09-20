@@ -24,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { CommentThread } from "@/components/comments/comment-thread";
 import { TagEditor, type TagSummary } from "@/components/tags/tag-editor";
 import { orpc } from "@/utils/orpc";
 
@@ -264,6 +265,8 @@ export function TaskDetailModal({
 							</div>
 						</div>
 					) : null}
+
+					<CommentThread taskId={task.id} />
 
 					<div className="flex items-center justify-between border-t pt-4">
 						<Button
