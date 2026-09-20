@@ -126,7 +126,10 @@ export function ProjectHeader({
 						<Plus className="h-4 w-4" />
 						<span>New Task</span>
 					</Button>
-					<Link params={{ projectId: project.id }} to="/settings/$projectId">
+					<Link
+						params={{ projectId: project.id }}
+						to="/dashboard/$projectId/settings"
+					>
 						<Button className="gap-1.5" size="sm" variant="outline">
 							<Settings className="h-4 w-4" />
 							<span className="hidden sm:inline">Settings</span>

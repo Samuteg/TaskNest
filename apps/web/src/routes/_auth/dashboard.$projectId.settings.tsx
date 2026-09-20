@@ -14,7 +14,7 @@ import { ProjectSettingsForm } from "@/components/settings/project-settings-form
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
-export const Route = createFileRoute("/_auth/settings/$projectId")({
+export const Route = createFileRoute("/_auth/dashboard/$projectId/settings")({
 	component: ProjectSettingsPage,
 });
 

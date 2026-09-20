@@ -1,7 +1,7 @@
 import { Button } from "@TaskNest/ui/components/button";
 import { Separator } from "@TaskNest/ui/components/separator";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { FolderKanban, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { useCallback } from "react";
 
@@ -9,10 +9,15 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/utils/orpc";
 
+const DASHBOARD_PROJECT_PATH = /^\/dashboard\/([^/]+)/;
+
 export function Sidebar() {
 	const navigate = useNavigate();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const { data: session } = authClient.useSession();
 	const projects = useQuery(orpc.projects.list.queryOptions());
+
+	const currentProjectId = pathname.match(DASHBOARD_PROJECT_PATH)?.[1];
 
 	const handleSignOut = useCallback(async () => {
 		await authClient.signOut({
@@ -71,12 +76,22 @@ export function Sidebar() {
 			<Separator />
 
 			<div className="space-y-1 p-3">
+				{currentProjectId ? (
+					<Link
+						className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent [&.active]:bg-accent [&.active]:font-medium"
+						params={{ projectId: currentProjectId }}
+						to="/dashboard/$projectId/settings"
+					>
+						<Settings className="h-4 w-4" />
+						<span>Project Settings</span>
+					</Link>
+				) : null}
 				<Link
-					className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent"
+					className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent [&.active]:bg-accent [&.active]:font-medium"
 					to="/settings"
 				>
 					<Settings className="h-4 w-4" />
-					<span>Settings</span>
+					<span>Account Settings</span>
 				</Link>
 				<div className="flex items-center justify-between px-3 py-2">
 					<div className="truncate">
