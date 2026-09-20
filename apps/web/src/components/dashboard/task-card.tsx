@@ -10,6 +10,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { CalendarDays, GripVertical } from "lucide-react";
 import type { MouseEvent } from "react";
+import { TagBadge } from "@/components/tags/tag-badge";
 
 type Task = Awaited<ReturnType<AppRouterClient["tasks"]["list"]>>[number];
 
@@ -31,6 +32,26 @@ const priorityBadges = {
 	},
 	urgent: { className: "", label: "Urgent", variant: "destructive" as const },
 };
+
+function TaskTags({ task, indent }: { indent?: boolean; task: Task }) {
+	if (task.tags.length === 0) {
+		return null;
+	}
+	return (
+		<div
+			className={`flex flex-wrap items-center gap-1 ${indent ? "pl-5.5" : ""}`}
+		>
+			{task.tags.slice(0, 3).map((t) => (
+				<TagBadge color={t.color} key={t.id} name={t.name} />
+			))}
+			{task.tags.length > 3 ? (
+				<span className="text-[10px] text-muted-foreground">
+					+{task.tags.length - 3}
+				</span>
+			) : null}
+		</div>
+	);
+}
 
 function handleDragHandleClick(e: MouseEvent) {
 	e.stopPropagation();
@@ -83,6 +104,7 @@ export function TaskCard({
 							{task.description}
 						</p>
 					) : null}
+					<TaskTags task={task} />
 					<div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
 						{task.dueDate ? (
 							<div className="flex items-center gap-1">
@@ -151,6 +173,8 @@ export function TaskCard({
 							{task.description}
 						</p>
 					) : null}
+
+					<TaskTags indent task={task} />
 
 					<div className="flex items-center justify-between pt-1 pl-5.5 text-[11px] text-muted-foreground">
 						{task.dueDate ? (

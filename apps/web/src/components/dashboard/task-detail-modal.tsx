@@ -22,8 +22,9 @@ import {
 } from "@TaskNest/ui/components/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Trash2 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { TagEditor, type TagSummary } from "@/components/tags/tag-editor";
 import { orpc } from "@/utils/orpc";
 
 type Task = Awaited<ReturnType<AppRouterClient["tasks"]["list"]>>[number];
@@ -55,6 +56,7 @@ export function TaskDetailModal({
 	onClose: () => void;
 }) {
 	const queryClient = useQueryClient();
+	const [tagSelection, setTagSelection] = useState<TagSummary[]>(task.tags);
 	const members = useQuery(
 		orpc.members.list.queryOptions({ input: { projectId: task.projectId } })
 	);
@@ -109,6 +111,33 @@ export function TaskDetailModal({
 	);
 
 	const priority = priorityBadges[task.priority] ?? priorityBadges.medium;
+
+	const setTaskTags = useMutation(
+		orpc.tags.setTags.mutationOptions({
+			onError: (err) => {
+				toast.error(err.message || "Failed to update tags");
+			},
+			onSuccess: (updated) => {
+				setTagSelection(updated.tags);
+				queryClient.invalidateQueries({
+					queryKey: orpc.tasks.list.queryKey({
+						input: { projectId: task.projectId },
+					}),
+				});
+			},
+		})
+	);
+
+	const handleTagsChange = useCallback(
+		(next: TagSummary[]) => {
+			setTagSelection(next);
+			setTaskTags.mutate({
+				tagIds: next.map((t) => t.id),
+				taskId: task.id,
+			});
+		},
+		[setTaskTags, task.id]
+	);
 
 	const handleOpenChange = useCallback(
 		(open: boolean) => {
@@ -205,6 +234,11 @@ export function TaskDetailModal({
 								</SelectContent>
 							</Select>
 						</div>
+					</div>
+
+					<div className="space-y-1.5">
+						<Label className="text-muted-foreground text-xs">Tags</Label>
+						<TagEditor onChange={handleTagsChange} selected={tagSelection} />
 					</div>
 
 					{task.dueDate ? (

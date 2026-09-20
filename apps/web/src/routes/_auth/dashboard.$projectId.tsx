@@ -25,6 +25,7 @@ function ProjectDetailPage() {
 	const [viewMode, setViewMode] = useState<ViewMode>("board");
 	const [searchQuery, setSearchQuery] = useState("");
 	const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
+	const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 	const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -34,6 +35,7 @@ function ProjectDetailPage() {
 	const tasks = useQuery(
 		orpc.tasks.list.queryOptions({ input: { projectId } })
 	);
+	const allTags = useQuery(orpc.tags.list.queryOptions());
 
 	const handleOpenCreate = useCallback(() => {
 		setIsCreateOpen(true);
@@ -47,10 +49,21 @@ function ProjectDetailPage() {
 		setSelectedTask(null);
 	}, []);
 
+	const handleTagToggle = useCallback((tagId: string) => {
+		setSelectedTagIds((prev) =>
+			prev.includes(tagId)
+				? prev.filter((id) => id !== tagId)
+				: [...prev, tagId]
+		);
+	}, []);
+
 	const filteredTasks = useMemo(() => {
 		const list = tasks.data ?? [];
 		return list.filter((t) => {
 			if (priorityFilter !== "all" && t.priority !== priorityFilter) {
+				return false;
+			}
+			if (!selectedTagIds.every((id) => t.tags.some((tg) => tg.id === id))) {
 				return false;
 			}
 			const query = searchQuery.trim().toLowerCase();
@@ -61,7 +74,7 @@ function ProjectDetailPage() {
 			const matchDesc = Boolean(t.description?.toLowerCase().includes(query));
 			return matchTitle || matchDesc;
 		});
-	}, [tasks.data, priorityFilter, searchQuery]);
+	}, [tasks.data, priorityFilter, selectedTagIds, searchQuery]);
 
 	if (project.isLoading || tasks.isLoading) {
 		return (
@@ -88,13 +101,16 @@ function ProjectDetailPage() {
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			<ProjectHeader
+				allTags={allTags.data ?? []}
 				onNewTask={handleOpenCreate}
 				onPriorityFilterChange={setPriorityFilter}
 				onSearchChange={setSearchQuery}
+				onTagToggle={handleTagToggle}
 				onViewModeChange={setViewMode}
 				priorityFilter={priorityFilter}
 				project={project.data}
 				searchQuery={searchQuery}
+				selectedTagIds={selectedTagIds}
 				tasks={allTasks}
 				viewMode={viewMode}
 			/>

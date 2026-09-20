@@ -22,11 +22,13 @@ import {
 	Table as TableIcon,
 } from "lucide-react";
 import { type ChangeEvent, useCallback } from "react";
+import { TagBadge } from "@/components/tags/tag-badge";
 
 type Project = NonNullable<
 	Awaited<ReturnType<AppRouterClient["projects"]["get"]>>
 >;
 type Task = Awaited<ReturnType<AppRouterClient["tasks"]["list"]>>[number];
+type TagSummary = Awaited<ReturnType<AppRouterClient["tags"]["list"]>>[number];
 
 export type ViewMode = "board" | "list";
 export type PriorityFilter = "all" | "low" | "medium" | "high" | "urgent";
@@ -40,6 +42,9 @@ export function ProjectHeader({
 	onSearchChange,
 	priorityFilter,
 	onPriorityFilterChange,
+	allTags,
+	selectedTagIds,
+	onTagToggle,
 	onNewTask,
 }: {
 	project: Project;
@@ -50,6 +55,9 @@ export function ProjectHeader({
 	onSearchChange: (query: string) => void;
 	priorityFilter: PriorityFilter;
 	onPriorityFilterChange: (priority: PriorityFilter) => void;
+	allTags: TagSummary[];
+	selectedTagIds: string[];
+	onTagToggle: (tagId: string) => void;
 	onNewTask: () => void;
 }) {
 	const totalTasks = tasks.length;
@@ -223,6 +231,31 @@ export function ProjectHeader({
 					</Button>
 				</div>
 			</div>
+
+			{/* Tag Filter Row */}
+			{allTags.length > 0 ? (
+				<div className="flex flex-wrap items-center gap-1.5 border-t bg-muted/20 px-6 py-2">
+					<span className="text-muted-foreground text-xs">Tags:</span>
+					{allTags.map((t) => {
+						const isActive = selectedTagIds.includes(t.id);
+						return (
+							<button
+								aria-pressed={isActive}
+								className={`rounded-full transition-opacity focus-visible:outline-2 focus-visible:outline-offset-1 ${
+									isActive
+										? "ring-1 ring-primary/40"
+										: "opacity-45 hover:opacity-90"
+								}`}
+								key={t.id}
+								onClick={() => onTagToggle(t.id)}
+								type="button"
+							>
+								<TagBadge color={t.color} name={t.name} />
+							</button>
+						);
+					})}
+				</div>
+			) : null}
 		</div>
 	);
 }

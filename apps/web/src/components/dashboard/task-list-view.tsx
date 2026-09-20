@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TagBadge } from "@/components/tags/tag-badge";
 import { orpc } from "@/utils/orpc";
 
 type Task = Awaited<ReturnType<AppRouterClient["tasks"]["list"]>>[number];
@@ -293,6 +294,18 @@ function TaskRow({
 						<p className="line-clamp-1 text-muted-foreground text-xs">
 							{task.description}
 						</p>
+					) : null}
+					{task.tags.length > 0 ? (
+						<div className="flex flex-wrap items-center gap-1 pt-0.5">
+							{task.tags.slice(0, 3).map((t) => (
+								<TagBadge color={t.color} key={t.id} name={t.name} />
+							))}
+							{task.tags.length > 3 ? (
+								<span className="text-[10px] text-muted-foreground">
+									+{task.tags.length - 3}
+								</span>
+							) : null}
+						</div>
 					) : null}
 				</div>
 			</TableCell>

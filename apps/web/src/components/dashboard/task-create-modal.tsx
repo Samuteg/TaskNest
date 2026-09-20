@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { TagEditor, type TagSummary } from "@/components/tags/tag-editor";
 import { client, orpc } from "@/utils/orpc";
 
 export function TaskCreateModal({
@@ -37,6 +38,7 @@ export function TaskCreateModal({
 	>("medium");
 	const [assigneeId, setAssigneeId] = useState<string | undefined>(undefined);
 	const [dueDate, setDueDate] = useState<string>("");
+	const [tags, setTags] = useState<TagSummary[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
 	const queryClient = useQueryClient();
@@ -108,6 +110,7 @@ export function TaskCreateModal({
 				dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
 				priority,
 				projectId,
+				tagIds: tags.map((t) => t.id),
 				title: title.trim(),
 			});
 
@@ -127,6 +130,7 @@ export function TaskCreateModal({
 			assigneeId,
 			dueDate,
 			priority,
+			tags,
 			projectId,
 			defaultStatus,
 			createTask,
@@ -209,6 +213,11 @@ export function TaskCreateModal({
 								))}
 							</SelectContent>
 						</Select>
+					</div>
+
+					<div className="space-y-1.5">
+						<Label>Tags</Label>
+						<TagEditor onChange={setTags} selected={tags} />
 					</div>
 
 					<div className="flex justify-end gap-2 pt-2">
