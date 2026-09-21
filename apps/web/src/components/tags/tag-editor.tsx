@@ -11,7 +11,13 @@ import {
 import { Input } from "@TaskNest/ui/components/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ChangeEvent, type FormEvent, useCallback, useState } from "react";
+import {
+	type ChangeEvent,
+	type FormEvent,
+	useCallback,
+	useMemo,
+	useState,
+} from "react";
 import { toast } from "sonner";
 
 import { TagBadge } from "@/components/tags/tag-badge";
@@ -25,11 +31,19 @@ export type TagSummary = Awaited<
  * Controlled tag picker: removable `TagBadge` chips + "Add tag" dropdown
  * listing the user's tags, with an inline create flow (Ruling 2: built only
  * from existing ui primitives, no popover/command).
+ *
+ * `selected` is the caller's OWN tag selection — `onChange` only ever emits
+ * owned tags, so a `setTags` payload can never contain foreign ids.
+ * `attached` (optional) is the task's full attached list: tags owned by
+ * other members render as non-removable read-only chips and are never
+ * echoed back through `onChange`.
  */
 export function TagEditor({
+	attached = [],
 	onChange,
 	selected,
 }: {
+	attached?: TagSummary[];
 	onChange: (next: TagSummary[]) => void;
 	selected: TagSummary[];
 }) {
@@ -38,6 +52,13 @@ export function TagEditor({
 	const [newTagName, setNewTagName] = useState("");
 
 	const availableTags = useQuery(orpc.tags.list.queryOptions());
+
+	const ownIds = useMemo(
+		() => new Set((availableTags.data ?? []).map((t) => t.id)),
+		[availableTags.data]
+	);
+
+	const foreignTags = attached.filter((t) => !ownIds.has(t.id));
 
 	const createTag = useMutation(
 		orpc.tags.create.mutationOptions({
@@ -96,6 +117,9 @@ export function TagEditor({
 
 	return (
 		<div className="flex flex-wrap items-center gap-1.5">
+			{foreignTags.map((t) => (
+				<TagBadge color={t.color} key={`foreign-${t.id}`} name={t.name} />
+			))}
 			{selected.map((t) => (
 				<TagBadge
 					color={t.color}

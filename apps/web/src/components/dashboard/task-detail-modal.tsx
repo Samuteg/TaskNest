@@ -22,7 +22,7 @@ import {
 } from "@TaskNest/ui/components/select";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Trash2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { TagEditor, type TagSummary } from "@/components/tags/tag-editor";
@@ -57,9 +57,23 @@ export function TaskDetailModal({
 	onClose: () => void;
 }) {
 	const queryClient = useQueryClient();
+	// Full attached list (owned + foreign); foreign tags stay read-only and are
+	// never echoed into a setTags payload (the server scopes replacement to
+	// the caller's own attachments anyway).
 	const [tagSelection, setTagSelection] = useState<TagSummary[]>(task.tags);
+	const previousTagSelection = useRef<TagSummary[]>(task.tags);
 	const members = useQuery(
 		orpc.members.list.queryOptions({ input: { projectId: task.projectId } })
+	);
+
+	const availableTags = useQuery(orpc.tags.list.queryOptions());
+	const ownTagIds = useMemo(
+		() => new Set((availableTags.data ?? []).map((t) => t.id)),
+		[availableTags.data]
+	);
+	const ownedTagSelection = useMemo(
+		() => tagSelection.filter((t) => ownTagIds.has(t.id)),
+		[tagSelection, ownTagIds]
 	);
 
 	const updateStatus = useMutation(
@@ -116,6 +130,8 @@ export function TaskDetailModal({
 	const setTaskTags = useMutation(
 		orpc.tags.setTags.mutationOptions({
 			onError: (err) => {
+				// Roll the optimistic selection back to its previous state.
+				setTagSelection(previousTagSelection.current);
 				toast.error(err.message || "Failed to update tags");
 			},
 			onSuccess: (updated) => {
@@ -130,14 +146,19 @@ export function TaskDetailModal({
 	);
 
 	const handleTagsChange = useCallback(
-		(next: TagSummary[]) => {
-			setTagSelection(next);
+		(nextOwned: TagSummary[]) => {
+			previousTagSelection.current = tagSelection;
+			// Optimistic: keep foreign attachments, swap the owned part.
+			setTagSelection((previous) => [
+				...previous.filter((t) => !ownTagIds.has(t.id)),
+				...nextOwned,
+			]);
 			setTaskTags.mutate({
-				tagIds: next.map((t) => t.id),
+				tagIds: nextOwned.map((t) => t.id),
 				taskId: task.id,
 			});
 		},
-		[setTaskTags, task.id]
+		[ownTagIds, setTaskTags, tagSelection, task.id]
 	);
 
 	const handleOpenChange = useCallback(
@@ -239,7 +260,11 @@ export function TaskDetailModal({
 
 					<div className="space-y-1.5">
 						<Label className="text-muted-foreground text-xs">Tags</Label>
-						<TagEditor onChange={handleTagsChange} selected={tagSelection} />
+						<TagEditor
+							attached={tagSelection}
+							onChange={handleTagsChange}
+							selected={ownedTagSelection}
+						/>
 					</div>
 
 					{task.dueDate ? (

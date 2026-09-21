@@ -99,6 +99,7 @@ export function CommentThread({ taskId }: { taskId: string }) {
 
 			<form className="space-y-1.5" onSubmit={handleSubmit}>
 				<Textarea
+					aria-label="Write a comment"
 					maxLength={2000}
 					onChange={handleBodyChange}
 					placeholder="Write a comment..."
@@ -243,6 +244,7 @@ function CommentRow({
 				{isEditing ? (
 					<div className="space-y-1.5">
 						<Textarea
+							aria-label="Edit comment"
 							maxLength={2000}
 							onChange={handleDraftChange}
 							rows={2}

@@ -10,6 +10,8 @@ Plataforma SaaS de gestao de projetos e tarefas — crie projetos, convide membr
 - **Autenticacao** — email/senha com Better-Auth (login, cadastro, sessao, dark/light mode)
 - **Dashboard** (`/dashboard`) — visao geral dos projetos do usuario
 - **Projeto** (`/dashboard/$projectId`) — quadro Kanban com tarefas por status (todo/in_progress/done), prioridade, responsavel e prazo
+- **Tags** — tags personalizadas por usuario, filtro no board por tag
+- **Comentarios** — thread de comentarios por task com permissoes por papel
 - **Membros** — papeis owner/admin/member, alteracao de papel e remocao
 - **Convites** — convidar por email, aceitar/recusar, listar pendentes
 - **Perfil** — dados do usuario logado
@@ -26,7 +28,7 @@ TaskNest/
 │   ├── docs/         Documentacao frontend (Astro Starlight)
 │   └── fumadocs/     Documentacao backend (Next.js + Fumadocs)
 ├── packages/
-│   ├── api/          Routers oRPC: projects, tasks, members, invitations, profile
+│   ├── api/          Routers oRPC: projects, tasks, members, invitations, profile, tags, comments
 │   ├── db/           Schema Drizzle + migrations (PostgreSQL)
 │   ├── auth/         Configuracao Better-Auth
 │   ├── ui/           shadcn/ui compartilhado + tokens/globals.css

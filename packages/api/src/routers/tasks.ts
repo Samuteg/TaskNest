@@ -103,27 +103,32 @@ export const tasksRouter = {
 				input.tagIds ?? []
 			);
 
-			const [newTask] = await context.db
-				.insert(task)
-				.values({
-					assigneeId: input.assigneeId,
-					description: input.description,
-					dueDate: input.dueDate ? new Date(input.dueDate) : null,
-					priority: input.priority ?? "medium",
-					projectId: input.projectId,
-					title: input.title,
-				})
-				.returning();
+			// Task row + tag attachments commit atomically.
+			const newTask = await context.db.transaction(async (tx) => {
+				const [inserted] = await tx
+					.insert(task)
+					.values({
+						assigneeId: input.assigneeId,
+						description: input.description,
+						dueDate: input.dueDate ? new Date(input.dueDate) : null,
+						priority: input.priority ?? "medium",
+						projectId: input.projectId,
+						title: input.title,
+					})
+					.returning();
 
-			if (!newTask) {
-				throw new ORPCError("INTERNAL_SERVER_ERROR");
-			}
+				if (!inserted) {
+					throw new ORPCError("INTERNAL_SERVER_ERROR");
+				}
 
-			if (tagIds.length > 0) {
-				await context.db
-					.insert(taskTag)
-					.values(tagIds.map((tagId) => ({ tagId, taskId: newTask.id })));
-			}
+				if (tagIds.length > 0) {
+					await tx
+						.insert(taskTag)
+						.values(tagIds.map((tagId) => ({ tagId, taskId: inserted.id })));
+				}
+
+				return inserted;
+			});
 
 			const created = await getTaskWithTags(context.db, newTask.id);
 			if (!created) {
@@ -229,7 +234,7 @@ export const tasksRouter = {
 				throw new ORPCError("FORBIDDEN");
 			}
 
-			const [updated] = await context.db
+			await context.db
 				.update(task)
 				.set({
 					...(input.title !== undefined && { title: input.title }),
@@ -244,13 +249,13 @@ export const tasksRouter = {
 						dueDate: input.dueDate ? new Date(input.dueDate) : null,
 					}),
 				})
-				.where(eq(task.id, input.taskId))
-				.returning();
+				.where(eq(task.id, input.taskId));
 
+			// Unified flattened contract (same shape as list/get/create).
+			const updated = await getTaskWithTags(context.db, input.taskId);
 			if (!updated) {
 				throw new ORPCError("NOT_FOUND");
 			}
-
 			return updated;
 		}),
 
@@ -271,16 +276,16 @@ export const tasksRouter = {
 
 			await requireMember(context.db, context.session.user.id, found.projectId);
 
-			const [updated] = await context.db
+			await context.db
 				.update(task)
 				.set({ status: input.status })
-				.where(eq(task.id, input.taskId))
-				.returning();
+				.where(eq(task.id, input.taskId));
 
+			// Unified flattened contract (same shape as list/get/create).
+			const updated = await getTaskWithTags(context.db, input.taskId);
 			if (!updated) {
 				throw new ORPCError("NOT_FOUND");
 			}
-
 			return updated;
 		}),
 };

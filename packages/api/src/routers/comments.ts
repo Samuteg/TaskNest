@@ -132,7 +132,7 @@ export const commentsRouter = {
 				membership.role === "admin" || membership.role === "owner";
 
 			const comments = await context.db.query.taskComment.findMany({
-				orderBy: [asc(taskComment.createdAt)],
+				orderBy: [asc(taskComment.createdAt), asc(taskComment.id)],
 				where: eq(taskComment.taskId, input.taskId),
 				with: { author: { columns: { id: true, image: true, name: true } } },
 			});

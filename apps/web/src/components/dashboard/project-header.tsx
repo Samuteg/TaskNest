@@ -23,12 +23,12 @@ import {
 } from "lucide-react";
 import { type ChangeEvent, useCallback } from "react";
 import { TagBadge } from "@/components/tags/tag-badge";
+import type { TagSummary } from "@/components/tags/tag-editor";
 
 type Project = NonNullable<
 	Awaited<ReturnType<AppRouterClient["projects"]["get"]>>
 >;
 type Task = Awaited<ReturnType<AppRouterClient["tasks"]["list"]>>[number];
-type TagSummary = Awaited<ReturnType<AppRouterClient["tags"]["list"]>>[number];
 
 export type ViewMode = "board" | "list";
 export type PriorityFilter = "all" | "low" | "medium" | "high" | "urgent";

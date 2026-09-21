@@ -1,6 +1,6 @@
 import { tag, task, taskTag } from "@TaskNest/db";
 import { ORPCError } from "@orpc/server";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
@@ -86,12 +86,29 @@ export const tagsRouter = {
 			await requireMember(context.db, userId, found.projectId);
 			const tagIds = await assertOwnedTagIds(context.db, userId, input.tagIds);
 
-			await context.db.delete(taskTag).where(eq(taskTag.taskId, input.taskId));
-			if (tagIds.length > 0) {
-				await context.db
-					.insert(taskTag)
-					.values(tagIds.map((tagId) => ({ tagId, taskId: input.taskId })));
-			}
+			// Scoped replace: only the caller's own attachments are removed, so
+			// tags other members attached to the same task are never wiped.
+			await context.db.transaction(async (tx) => {
+				await tx
+					.delete(taskTag)
+					.where(
+						and(
+							eq(taskTag.taskId, input.taskId),
+							inArray(
+								taskTag.tagId,
+								tx
+									.select({ id: tag.id })
+									.from(tag)
+									.where(eq(tag.userId, userId))
+							)
+						)
+					);
+				if (tagIds.length > 0) {
+					await tx
+						.insert(taskTag)
+						.values(tagIds.map((tagId) => ({ tagId, taskId: input.taskId })));
+				}
+			});
 
 			const updated = await getTaskWithTags(context.db, input.taskId);
 			if (!updated) {
