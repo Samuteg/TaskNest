@@ -11,6 +11,9 @@ export default defineConfig({
 					items: [
 						{ label: "Começando", slug: "guides/getting-started" },
 						{ label: "Página do Projeto", slug: "guides/project-page" },
+						{ label: "Tags", slug: "guides/tags" },
+						{ label: "Comentários", slug: "guides/comments" },
+						{ label: "Configurações", slug: "guides/settings" },
 						{ label: "Componentes UI", slug: "guides/ui-components" },
 						{ label: "Fluxo de Autenticação", slug: "guides/auth-flow" },
 					],

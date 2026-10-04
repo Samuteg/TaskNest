@@ -17,9 +17,16 @@ description: Login, sessão, menu do usuário e dark mode.
 | Componente | Caminho | Função |
 | --- | --- | --- |
 | `auth-client` | `apps/web/src/lib/auth-client.ts` | Cliente Better-Auth |
-| `user-menu` | `apps/web/src/components/user-menu.tsx` | Menu do usuário logado |
-| `header` | `apps/web/src/components/header.tsx` | Barra superior com nav e auth |
-| `login` | `apps/web/src/routes/login.tsx` | Página de login/cadastro |
+| `user-menu` | `apps/web/src/components/user-menu.tsx` | Menu do usuário logado (Dashboard, Account Settings, Sign Out) |
+| `header` | `apps/web/src/components/header.tsx` | Barra superior em grid centrado; some nas rotas `/dashboard*` e `/settings*` |
+| `auth-cta` | `apps/web/src/components/landing/auth-cta.tsx` | CTA auth-aware: logado → "Go to Dashboard"; anônimo → "Try Demo"/"Try the Demo" |
+| `login` | `apps/web/src/routes/login.tsx` | Página de login/cadastro com `beforeLoad` que redireciona logados para `/dashboard` |
+
+## Header e CTAs
+
+- O header usa grid `1fr auto 1fr`: logo à esquerda, nav centralizada, ações à direita.
+- `AuthCta` (compacto no header, cheio no hero/CTA) decide pelo `useSession()`: sessão ativa leva a `/dashboard`, senão a `/login`.
+- O botão GitHub aparece só na landing (`isLanding`).
 
 ## O backend verifica
 

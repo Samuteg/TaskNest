@@ -21,14 +21,15 @@ Cada card exibe:
 - **Prioridade** — badge colorido (`low` / `medium` / `high` / `urgent`)
 - **Responsável** — avatar do assignee
 - **Prazo** — data de entrega (se definida)
+- **Tags** — até 3 `TagBadge` + overflow "+N" (`task.tags`)
 
 ## Funcionalidades
 
-- **Criar tarefa** — botão "+" no topo da coluna
-- **Editar tarefa** — clique no card abre modal com detalhes
-- **Mover tarefa** — drag & drop entre colunas (atualiza status)
-- **Filtrar** — por responsável e prioridade
-- **Excluir** — conforme papel do usuário
+- **Criar tarefa** — botão "+" no topo da coluna, com `TagEditor` (envia `tagIds`)
+- **Editar tarefa** — clique no card abre modal com detalhes (`TagEditor` + `CommentThread`)
+- **Mover tarefa** — drag & drop entre colunas (atualiza status, com rollback otimista)
+- **Filtrar** — por responsável, prioridade e tags pessoais (semântica AND: só tasks com **todas** as tags selecionadas)
+- **Excluir** — `admin`/`owner` (botão no modal)
 
 ## Papéis e permissões
 
@@ -36,7 +37,10 @@ Cada card exibe:
 | --- | --- | --- | --- |
 | Ver tarefas | ✅ | ✅ | ✅ |
 | Criar tarefa | ✅ | ✅ | ✅ |
-| Editar tarefa | ✅ | ✅ | ✅ |
-| Excluir tarefa | ✅ | ✅ | ✅ |
+| Editar tarefa | própria task | ✅ | ✅ |
+| Excluir tarefa | ❌ | ✅ | ✅ |
+| Anexar próprias tags | ✅ | ✅ | ✅ |
+| Comentar | ✅ | ✅ | ✅ |
+| Editar/excluir comentário | próprio | ✅ | ✅ |
 | Gerenciar membros | ❌ | ✅ | ✅ |
 | Excluir projeto | ❌ | ❌ | ✅ |

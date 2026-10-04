@@ -1,0 +1,17 @@
+---
+title: Configurações
+description: Settings de conta vs. settings de projeto.
+---
+
+Rotas separadas por responsabilidade (file-based, TanStack Router):
+
+| Rota | Escopo | Conteúdo |
+| --- | --- | --- |
+| `/settings` | Conta | Perfil do usuário (`ProfileForm`: nome, email) |
+| `/dashboard/$projectId/settings` | Projeto | Nome/descrição (`ProjectSettingsForm`), membros e convites (`MemberList`, `InviteModal`), exclusão (`DeleteProjectDialog`) |
+
+## Detalhes
+
+- A sidebar mostra "Account Settings" (`/settings`) e, dentro de um projeto, o link contextual "Project Settings" (`/dashboard/$projectId/settings`).
+- O header do board (`ProjectHeader`) aponta para as settings do projeto; o `user-menu` aponta para as settings da conta.
+- A página de projeto usa abas (settings, membros) e só `owner`/`admin` gerenciam membros; só `owner` exclui o projeto.

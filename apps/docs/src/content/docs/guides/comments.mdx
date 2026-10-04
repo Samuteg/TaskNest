@@ -1,0 +1,27 @@
+---
+title: Comentários
+description: Thread de comentários da task com edição e exclusão.
+---
+
+Cada task tem uma thread (`task_comment`) exibida no modal de detalhes, após o bloco do responsável.
+
+## Componente
+
+| Componente | Caminho | Função |
+| --- | --- | --- |
+| `CommentThread` | `apps/web/src/components/comments/comment-thread.tsx` | Lista ascendente + criação, edição inline e exclusão |
+
+## Fluxos
+
+- **Listar** — `comments.list({ taskId })` ordenado por `createdAt` asc; cada item traz avatar/nome do autor, data e corpo.
+- **Comentar** — textarea + botão "Comment" chama `comments.create`; a lista é invalidada por `queryKey({ input: { taskId } })`.
+- **Editar** — botão Edit (visível se `canEdit`) abre textarea inline + Save (`comments.update`).
+- **Excluir** — ícone `Trash2` chama `comments.delete` e invalida a lista.
+
+## Permissões
+
+`canEdit` vem do servidor: `autor || papel owner/admin`. Membros comuns não veem os botões em comentários alheios; o backend retorna `FORBIDDEN` se tentarem.
+
+## Validação
+
+Corpo com 1..2000 caracteres (zod na API e no client).

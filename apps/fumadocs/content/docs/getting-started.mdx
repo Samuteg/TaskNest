@@ -31,6 +31,12 @@ O `bunfig.toml` desativa o autoload de env do Bun; o bootstrap do server (Varloc
 
 ## Banco de dados
 
+PostgreSQL local via Docker (serviço `db` no `docker-compose.yml`):
+
+```bash
+sudo docker compose up -d db   # postgres:postgres@localhost:5432/tasknest
+```
+
 ```bash
 bun run db:push      # aplica schema (dev)
 bun run db:generate  # gera client/tipos

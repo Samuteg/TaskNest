@@ -49,6 +49,45 @@ PostgreSQL + Drizzle. Schema em `packages/db/src/schema/`, migrations em `packag
 
 Convite por email com projeto, papel, status e expiração. Verifique o schema em `packages/db/src/schema/invitations.ts` para os campos exatos.
 
+### tag
+
+Tags pessoais por usuário (globais do usuário, não do projeto).
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid PK | default random |
+| `name` | text | not null; único por (`user_id`, `name`) |
+| `color` | text | default `#6366f1`, formato `#rrggbb` |
+| `user_id` | text → user.id | cascade on delete, indexado |
+| `created_at` / `updated_at` | timestamp | default now / on update |
+
+### task_tag
+
+Vínculo N:N entre tasks e tags.
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `task_id` | uuid → task.id | cascade on delete, parte da PK |
+| `tag_id` | uuid → tag.id | cascade on delete, parte da PK |
+
+PK composta (`task_id`, `tag_id`). Excluir uma tag remove seus vínculos por cascade.
+
+### task_comment
+
+Comentários de uma task, com autor.
+
+| Coluna | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid PK | default random |
+| `task_id` | uuid → task.id | cascade on delete, indexado |
+| `author_id` | text → user.id | cascade on delete |
+| `body` | text | not null, 1..2000 (validado na API) |
+| `created_at` / `updated_at` | timestamp | default now / on update |
+
+## Relações (`relations.ts`)
+
+`taskRelations` (assignee, project, `taskTags`, `taskComments`), `taskTagRelations`, `tagRelations` e `taskCommentRelations` (autor + task) vivem em `packages/db/src/schema/relations.ts` — `tasks.ts` define só a tabela, para evitar ciclo de imports com `tags.ts`/`comments.ts`.
+
 ## Enums
 
 | Enum | Valores |

@@ -1,0 +1,28 @@
+---
+title: Tags
+description: Tags pessoais, atribuição a tasks e filtro do quadro.
+---
+
+Tags são **pessoais por usuário** (`tag.user_id`): qualquer membro pode anexar as **próprias** tags a tasks do projeto. O filtro do quadro mostra só as tags do usuário logado.
+
+## Componentes
+
+| Componente | Caminho | Função |
+| --- | --- | --- |
+| `TagBadge` | `apps/web/src/components/tags/tag-badge.tsx` | Chip `{ name, color }` |
+| `TagEditor` | `apps/web/src/components/tags/tag-editor.tsx` | Chips removíveis + dropdown "Add tag" com criação inline |
+| `ProjectHeader` (filtro) | `apps/web/src/components/dashboard/project-header.tsx` | Chips de filtro com `aria-pressed` |
+
+## Fluxos
+
+- **Criar tag** — no dropdown, "Create tag" abre o campo de texto; `Enter`/`Add` chama `tags.create`. O campo usa `stopPropagation` no `keydown` para o menu não roubar a digitação; `Escape` cancela; fechar o menu limpa o rascunho.
+- **Atribuir** — marcar/desmarcar no dropdown ou remover o chip chama `tags.setTags` com a lista completa de ids **próprios**. Tags de outros membros aparecem como chips somente leitura e nunca entram no payload.
+- **Criar task com tags** — `task-create-modal.tsx` usa o mesmo `TagEditor` e envia `tagIds` em `tasks.create`.
+- **Filtrar o quadro** — `dashboard.$projectId` mantém `selectedTagIds` e filtra client-side com semântica AND: `selectedTagIds.every((id) => t.tags.some((tg) => tg.id === id))`. O parâmetro `tagIds` de `tasks.list` existe na API, mas o board usa o filtro local.
+
+## Regras (backend)
+
+- `tags.list` retorna só as tags da sessão, ordenadas por nome.
+- `tags.create` é idempotente por (`userId`, `name`).
+- `update`/`delete` só o dono (`FORBIDDEN` caso contrário).
+- `setTags` exige membership, rejeita ids estrangeiros (`FORBIDDEN`) e substitui **só** os vínculos do próprio usuário (transação), preservando tags alheias.

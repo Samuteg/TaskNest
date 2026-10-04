@@ -16,10 +16,31 @@ Backend: Fastify + oRPC (`apps/server`), regras em `packages/api/src/routers/`. 
 
 ### tasks
 
-- Criar tarefa no projeto (membros)
-- Listar por projeto (filtro por status)
-- Atualizar status/prioridade/título/descrição/responsável/prazo
-- Excluir (conforme papel)
+- Criar tarefa no projeto (membros; aceita `tagIds` opcionais, validados como tags próprias)
+- Listar por projeto (filtro por status + `tagIds` opcionais via junção `task_tag`)
+- Detalhar tarefa (membro do projeto)
+- Atualizar status/prioridade/título/descrição/responsável/prazo (`member` só na própria task; `admin`/`owner` em qualquer)
+- Excluir (`admin`/`owner`; `member` recebe `FORBIDDEN`)
+- Todas as respostas (`create`/`get`/`list`/`update`/`updateStatus`) retornam `tags` achatadas (`{ id, name, color }[]`)
+
+### tags
+
+Tags pessoais por usuário (`tag.user_id`), anexáveis a tasks de projetos onde o usuário é membro.
+
+- `list` — tags do usuário da sessão, ordenadas por nome
+- `create({ name (1..30), color? hex })` — idempotente por (`userId`, `name`): retorna a existente
+- `update({ tagId, name?, color? })` — só o dono; `FORBIDDEN` caso contrário
+- `delete({ tagId })` — só o dono (vínculos `task_tag` saem por cascade)
+- `setTags({ taskId, tagIds })` — exige membership no projeto; valida que todos os ids pertencem ao usuário (`FORBIDDEN` em id estrangeiro); substitui **apenas** os vínculos do próprio usuário, preservando tags de outros membros; roda em transação
+
+### comments
+
+Thread por task (`task_comment`), ordenada por `createdAt` asc.
+
+- `list({ taskId })` — membros; retorna `{ id, body, createdAt, updatedAt, author: { id, name, image }, canEdit }`
+- `create({ taskId, body (1..2000) })` — membros
+- `update({ commentId, body })` / `delete({ commentId })` — autor ou `owner`/`admin`; demais recebem `FORBIDDEN`
+- `canEdit = autor || papel owner/admin` (calculado no servidor)
 
 ### members
 
@@ -42,7 +63,13 @@ Backend: Fastify + oRPC (`apps/server`), regras em `packages/api/src/routers/`. 
 | Ação | Quem pode |
 | --- | --- |
 | Ler projeto/tarefas | membro do projeto |
-| Criar/editar tarefa | membro do projeto |
+| Criar tarefa | membro do projeto |
+| Editar tarefa | `member` só na própria task; `admin`/`owner` em qualquer |
+| Excluir tarefa | `admin` ou `owner` |
+| Criar/editar/excluir tag própria | dono da tag |
+| Anexar tags à task (`setTags`) | membro do projeto (só ids próprios; preserva tags alheias) |
+| Comentar / listar comentários | membro do projeto |
+| Editar/excluir comentário | autor ou `owner`/`admin` |
 | Convidar / gerenciar membros | admin ou owner |
 | Excluir projeto | owner |
 | Aceitar convite | dono do email convidado |
