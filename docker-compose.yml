@@ -1,6 +1,25 @@
 name: TaskNest
 
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: tasknest-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tasknest
+    ports:
+      - "5432:5432"
+    volumes:
+      - tasknest_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tasknest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
   web:
     build:
       context: .
@@ -42,6 +61,10 @@ services:
         required: false
     environment:
       CORS_ORIGIN: http://localhost:3001
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/tasknest
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -62,3 +85,6 @@ secrets:
     file: apps/web/.env
   server_env:
     file: apps/server/.env
+
+volumes:
+  tasknest_pgdata:

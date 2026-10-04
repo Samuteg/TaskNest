@@ -14,6 +14,7 @@ import { Plus } from "lucide-react";
 import {
 	type ChangeEvent,
 	type FormEvent,
+	type KeyboardEvent,
 	useCallback,
 	useMemo,
 	useState,
@@ -89,6 +90,15 @@ export function TagEditor({
 		[]
 	);
 
+	const handleKeyDown = useCallback((e: KeyboardEvent) => {
+		e.stopPropagation();
+		if (e.key === "Escape") {
+			e.preventDefault();
+			setIsCreating(false);
+			setNewTagName("");
+		}
+	}, []);
+
 	const handleCreateTag = useCallback(
 		async (e: FormEvent) => {
 			e.preventDefault();
@@ -115,6 +125,13 @@ export function TagEditor({
 		setIsCreating(true);
 	}, []);
 
+	const handleOpenChange = useCallback((open: boolean) => {
+		if (!open) {
+			setIsCreating(false);
+			setNewTagName("");
+		}
+	}, []);
+
 	return (
 		<div className="flex flex-wrap items-center gap-1.5">
 			{foreignTags.map((t) => (
@@ -128,7 +145,7 @@ export function TagEditor({
 					onRemove={() => handleToggle(t)}
 				/>
 			))}
-			<DropdownMenu>
+			<DropdownMenu onOpenChange={handleOpenChange}>
 				<DropdownMenuTrigger
 					className="h-6 gap-1 px-1.5 text-[10px]"
 					render={<Button size="sm" type="button" variant="outline" />}
@@ -163,6 +180,7 @@ export function TagEditor({
 								className="h-7 text-xs"
 								maxLength={30}
 								onChange={handleNameChange}
+								onKeyDown={handleKeyDown}
 								placeholder="Tag name"
 								value={newTagName}
 							/>
@@ -176,7 +194,7 @@ export function TagEditor({
 							</Button>
 						</form>
 					) : (
-						<DropdownMenuItem onClick={handleStartCreate}>
+						<DropdownMenuItem closeOnClick={false} onClick={handleStartCreate}>
 							<Plus className="mr-1 h-3.5 w-3.5" />
 							<span>Create tag</span>
 						</DropdownMenuItem>

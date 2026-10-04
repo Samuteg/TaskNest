@@ -1,0 +1,47 @@
+{
+  "feature": "tags",
+  "timestamp": "2026-10-04T01:02:37.717Z",
+  "gitRev": "c70ebde",
+  "command": "node --test --test-reporter=tap test/tags.spec.ts",
+  "reporter": "tap",
+  "exitCode": 0,
+  "testsParsed": 7,
+  "results": {
+    "AC-001": {
+      "status": "pass",
+      "testName": "criação e listagem de tags do usuário @spec:AC-001",
+      "method": "tap"
+    },
+    "AC-002": {
+      "status": "pass",
+      "testName": "criação idempotente por usuário e nome @spec:AC-002",
+      "method": "tap"
+    },
+    "AC-003": {
+      "status": "pass",
+      "testName": "atribuição retorna tags achatadas @spec:AC-003",
+      "method": "tap"
+    },
+    "AC-004": {
+      "status": "pass",
+      "testName": "tags estrangeiras ficam somente leitura no editor @spec:AC-004",
+      "method": "tap"
+    },
+    "AC-005": {
+      "status": "pass",
+      "testName": "IDs de tags estrangeiras são rejeitados e não alteram task @spec:AC-005",
+      "method": "tap"
+    },
+    "AC-006": {
+      "status": "pass",
+      "testName": "filtro de quadro usa todas as tags selecionadas @spec:AC-006",
+      "method": "tap"
+    },
+    "AC-007": {
+      "status": "pass",
+      "testName": "criação de task envia IDs de tags selecionadas @spec:AC-007",
+      "method": "tap"
+    }
+  },
+  "principles": {}
+}

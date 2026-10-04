@@ -64,6 +64,8 @@ bun run env:generate   # apos alterar qualquer .env.schema
 
 ### Banco de dados
 
+PostgreSQL em Docker (serviço `db` no `docker-compose.yml`): `sudo docker compose up -d db` (credenciais de dev: `postgres:postgres@localhost:5432/tasknest`, volume nomeado `tasknest_pgdata`).
+
 ```bash
 bun run db:push      # aplica schema (dev)
 bun run db:generate  # gera client/tipos
@@ -83,7 +85,7 @@ bun run dev:server   # so a API (porta 3000)
 
 ```bash
 bun run docker:build  # build das imagens
-bun run docker:up     # sobe web + server
+bun run docker:up     # sobe db + web + server
 bun run docker:logs   # logs
 bun run docker:down   # para a stack
 ```
