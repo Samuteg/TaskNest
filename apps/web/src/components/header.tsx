@@ -53,20 +53,18 @@ export default function Header() {
 
 				<div className="flex items-center gap-2 justify-self-end">
 					{isLanding && (
-						<>
-							<a
-								aria-label="View TaskNest on GitHub"
-								href="https://github.com/Samuteg/TaskNest"
-								rel="noopener noreferrer"
-								target="_blank"
-							>
-								<Button size="icon" variant="ghost">
-									<Code2 className="h-4 w-4" />
-								</Button>
-							</a>
-							<AuthCta compact />
-						</>
+						<a
+							aria-label="View TaskNest on GitHub"
+							href="https://github.com/Samuteg/TaskNest"
+							rel="noopener noreferrer"
+							target="_blank"
+						>
+							<Button size="icon" variant="ghost">
+								<Code2 className="h-4 w-4" />
+							</Button>
+						</a>
 					)}
+					<AuthCta compact />
 					<ModeToggle />
 					<UserMenu />
 				</div>

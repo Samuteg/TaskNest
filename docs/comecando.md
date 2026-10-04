@@ -31,5 +31,5 @@ O `bunfig.toml` desativa o autoload de env do Bun; o bootstrap do server (Varloc
 | `/login` | Login/cadastro |
 | `/dashboard` | Lista de projetos |
 | `/dashboard/$projectId` | Quadro de tarefas do projeto |
-| `/settings` | Configurações gerais |
-| `/settings/$projectId` | Configurações do projeto |
+| `/settings` | Configurações da conta |
+| `/dashboard/$projectId/settings` | Configurações do projeto |
