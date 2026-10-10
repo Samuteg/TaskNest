@@ -46,6 +46,22 @@ export async function assertOwnedTagIds(
 	return unique;
 }
 
+/**
+ * Rejects assigneeIds outside the project. Null/undefined clears or skips
+ * assignment. Unknown users have no membership row, so they fail closed
+ * with FORBIDDEN instead of a FK 500 that enumerates IDs.
+ */
+export async function assertAssigneeInProject(
+	db: Database,
+	assigneeId: string | null | undefined,
+	projectId: string
+) {
+	if (!assigneeId) {
+		return;
+	}
+	await requireMember(db, assigneeId, projectId);
+}
+
 export interface FlatTag {
 	color: string;
 	id: string;
@@ -97,6 +113,11 @@ export const tasksRouter = {
 		.handler(async ({ context, input }) => {
 			const userId = context.session.user.id;
 			await requireMember(context.db, userId, input.projectId);
+			await assertAssigneeInProject(
+				context.db,
+				input.assigneeId,
+				input.projectId
+			);
 			const tagIds = await assertOwnedTagIds(
 				context.db,
 				userId,
@@ -173,6 +194,8 @@ export const tasksRouter = {
 	list: protectedProcedure
 		.input(
 			z.object({
+				limit: z.number().int().min(1).max(100).default(50),
+				offset: z.number().int().min(0).default(0),
 				projectId: z.string().uuid(),
 				tagIds: z.array(z.string().uuid()).optional(),
 			})
@@ -180,6 +203,8 @@ export const tasksRouter = {
 		.handler(async ({ context, input }) => {
 			await requireMember(context.db, context.session.user.id, input.projectId);
 			const tasks = await context.db.query.task.findMany({
+				limit: input.limit,
+				offset: input.offset,
 				orderBy: [desc(task.createdAt)],
 				where: and(
 					eq(task.projectId, input.projectId),
@@ -232,6 +257,13 @@ export const tasksRouter = {
 			const isOwnTask = found.assigneeId === context.session.user.id;
 			if (membership.role === "member" && !isOwnTask) {
 				throw new ORPCError("FORBIDDEN");
+			}
+			if (input.assigneeId !== undefined) {
+				await assertAssigneeInProject(
+					context.db,
+					input.assigneeId,
+					found.projectId
+				);
 			}
 
 			await context.db

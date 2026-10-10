@@ -9,17 +9,17 @@ export const profileRouter = {
 	update: protectedProcedure
 		.input(
 			z.object({
-				email: z.string().email().optional(),
 				name: z.string().min(1).max(100).optional(),
 			})
 		)
 		.handler(async ({ context, input }) => {
+			// ponytail: email changes only via a verified Better-Auth flow (needs SMTP); add when a provider is configured.
+			if (input.name === undefined) {
+				throw new ORPCError("BAD_REQUEST");
+			}
 			const [updated] = await context.db
 				.update(user)
-				.set({
-					...(input.name !== undefined && { name: input.name }),
-					...(input.email !== undefined && { email: input.email }),
-				})
+				.set({ name: input.name })
 				.where(eq(user.id, context.session.user.id))
 				.returning();
 

@@ -1,8 +1,10 @@
 import { appRouter } from "@TaskNest/api/routers/index";
 import fastifyCors from "@fastify/cors";
+import fastifyHelmet from "@fastify/helmet";
+import fastifyRateLimit from "@fastify/rate-limit";
 import { OpenAPIHandler } from "@orpc/openapi/fastify";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
-import { onError } from "@orpc/server";
+import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fastify";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import Fastify from "fastify";
@@ -19,10 +21,24 @@ const baseCorsConfig = {
 	origin: env.CORS_ORIGIN,
 };
 
+function errorCode(error: unknown): string {
+	return error instanceof ORPCError ? error.code : "INTERNAL_SERVER_ERROR";
+}
+
+const fastify = Fastify({
+	logger: true,
+});
+
+// Awaited: @fastify/rate-limit wires routes via an onRoute hook, so it
+// must load before any route below is declared — otherwise limits never apply.
+await fastify.register(fastifyHelmet, { contentSecurityPolicy: false });
+await fastify.register(fastifyRateLimit, { max: 100, timeWindow: "1 minute" });
+await fastify.register(fastifyCors, baseCorsConfig);
+
 const rpcHandler = new RPCHandler(appRouter, {
 	interceptors: [
 		onError((error) => {
-			console.error(error);
+			fastify.log.warn({ code: errorCode(error) }, "RPC error");
 		}),
 	],
 });
@@ -30,7 +46,7 @@ const rpcHandler = new RPCHandler(appRouter, {
 const apiHandler = new OpenAPIHandler(appRouter, {
 	interceptors: [
 		onError((error) => {
-			console.error(error);
+			fastify.log.warn({ code: errorCode(error) }, "OpenAPI error");
 		}),
 	],
 	plugins: [
@@ -39,12 +55,6 @@ const apiHandler = new OpenAPIHandler(appRouter, {
 		}),
 	],
 });
-
-const fastify = Fastify({
-	logger: true,
-});
-
-fastify.register(fastifyCors, baseCorsConfig);
 
 fastify.register((rpcApp) => {
 	// Fully utilize oRPC features by letting oRPC parse the request body.
@@ -76,6 +86,9 @@ fastify.register((rpcApp) => {
 });
 
 fastify.route({
+	config: {
+		rateLimit: { max: 20, timeWindow: "1 minute" },
+	},
 	async handler(request, reply) {
 		try {
 			const url = new URL(request.url, `http://${request.headers.host}`);
@@ -96,8 +109,8 @@ fastify.route({
 				reply.header(key, value);
 			}
 			reply.send(response.body ? await response.text() : null);
-		} catch (error) {
-			fastify.log.error({ err: error }, "Authentication Error:");
+		} catch {
+			fastify.log.warn({ code: "AUTH_FAILURE" }, "Authentication error");
 			reply.status(500).send({
 				code: "AUTH_FAILURE",
 				error: "Internal authentication error",

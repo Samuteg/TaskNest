@@ -68,7 +68,11 @@ export function Pricing() {
 						</div>
 
 						<div className="mt-8">
-							<Link className="block w-full" to="/login">
+							<Link
+								className="block w-full"
+								search={{ verified: undefined }}
+								to="/login"
+							>
 								<Button className="h-11 w-full font-semibold text-sm">
 									Create Free Account
 									<ArrowRight className="ml-2 h-4 w-4" />

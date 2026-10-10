@@ -23,7 +23,7 @@ export function Sidebar() {
 		await authClient.signOut({
 			fetchOptions: {
 				onSuccess: () => {
-					navigate({ to: "/login" });
+					navigate({ search: { verified: undefined }, to: "/login" });
 				},
 			},
 		});

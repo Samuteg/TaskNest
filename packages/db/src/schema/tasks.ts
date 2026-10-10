@@ -45,6 +45,7 @@ export const task = pgTable(
 	},
 	(table) => [
 		index("task_projectId_idx").on(table.projectId),
+		index("task_projectId_createdAt_idx").on(table.projectId, table.createdAt),
 		index("task_assigneeId_idx").on(table.assigneeId),
 		index("task_status_idx").on(table.status),
 	]

@@ -9,6 +9,7 @@ export const Route = createFileRoute("/_auth")({
 		const session = await authClient.getSession();
 		if (!session.data) {
 			throw redirect({
+				search: { verified: undefined },
 				to: "/login",
 			});
 		}

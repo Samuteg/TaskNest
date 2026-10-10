@@ -20,7 +20,6 @@ export function ProfileForm({
 	user: { name: string; email: string };
 }) {
 	const [name, setName] = useState(user.name);
-	const [email, setEmail] = useState(user.email);
 
 	const updateProfile = useMutation(
 		orpc.profile.update.mutationOptions({
@@ -35,8 +34,8 @@ export function ProfileForm({
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
+		// Email changes only via a verified flow; profile keeps the name.
 		await updateProfile.mutateAsync({
-			email: email.trim() || undefined,
 			name: name.trim() || undefined,
 		});
 	};
@@ -64,12 +63,14 @@ export function ProfileForm({
 					<div className="space-y-1">
 						<Label htmlFor="profile-email">Email Address</Label>
 						<Input
+							disabled
 							id="profile-email"
-							onChange={(e) => setEmail(e.target.value)}
-							required
 							type="email"
-							value={email}
+							value={user.email}
 						/>
+						<p className="text-muted-foreground text-xs">
+							Email changes require verification and are not edited here.
+						</p>
 					</div>
 
 					<Button disabled={updateProfile.isPending} type="submit">

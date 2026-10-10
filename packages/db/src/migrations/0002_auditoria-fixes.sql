@@ -1,0 +1,1 @@
+CREATE INDEX "task_projectId_createdAt_idx" ON "task" USING btree ("project_id","created_at");

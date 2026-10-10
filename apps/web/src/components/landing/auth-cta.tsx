@@ -26,7 +26,7 @@ export function AuthCta({
 		);
 	}
 	return (
-		<Link to="/login">
+		<Link search={{ verified: undefined }} to="/login">
 			<Button className={className} size={compact ? "sm" : "lg"}>
 				<span>{compact ? "Try Demo" : "Try the Demo"}</span>
 				<ArrowRight className="h-4 w-4" />

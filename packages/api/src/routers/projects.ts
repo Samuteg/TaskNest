@@ -1,6 +1,6 @@
 import { project, projectMember, task } from "@TaskNest/db";
 import { ORPCError } from "@orpc/server";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../index";
@@ -77,28 +77,8 @@ export const projectsRouter = {
 	list: protectedProcedure.handler(async ({ context }) => {
 		const userId = context.session.user.id;
 
-		const statsSubquery = context.db
-			.select({
-				doneCount:
-					sql<number>`count(*) filter (where ${task.status} = 'done')`.as(
-						"done_count"
-					),
-				inProgressCount:
-					sql<number>`count(*) filter (where ${task.status} = 'in_progress')`.as(
-						"in_progress_count"
-					),
-				projectId: task.projectId,
-				taskCount: sql<number>`count(*)`.as("task_count"),
-				todoCount:
-					sql<number>`count(*) filter (where ${task.status} = 'todo')`.as(
-						"todo_count"
-					),
-			})
-			.from(task)
-			.groupBy(task.projectId)
-			.as("task_stats");
-
 		const memberships = await context.db.query.projectMember.findMany({
+			limit: 100,
 			where: eq(projectMember.userId, userId),
 			with: {
 				project: {
@@ -119,10 +99,30 @@ export const projectsRouter = {
 			return [];
 		}
 
-		const stats = await context.db
-			.select()
-			.from(statsSubquery)
-			.where(sql`${statsSubquery.projectId} in ${projectIds}`);
+		// Filter before grouping: aggregate only this user's projects.
+		const statsSubquery = context.db
+			.select({
+				doneCount:
+					sql<number>`count(*) filter (where ${task.status} = 'done')`.as(
+						"done_count"
+					),
+				inProgressCount:
+					sql<number>`count(*) filter (where ${task.status} = 'in_progress')`.as(
+						"in_progress_count"
+					),
+				projectId: task.projectId,
+				taskCount: sql<number>`count(*)`.as("task_count"),
+				todoCount:
+					sql<number>`count(*) filter (where ${task.status} = 'todo')`.as(
+						"todo_count"
+					),
+			})
+			.from(task)
+			.where(inArray(task.projectId, projectIds))
+			.groupBy(task.projectId)
+			.as("task_stats");
+
+		const stats = await context.db.select().from(statsSubquery);
 
 		const statsMap = new Map(stats.map((s) => [s.projectId, s]));
 

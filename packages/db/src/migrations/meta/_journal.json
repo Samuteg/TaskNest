@@ -15,6 +15,13 @@
       "when": 1789782516766,
       "tag": "0001_needy_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791595350901,
+      "tag": "0002_auditoria-fixes",
+      "breakpoints": true
     }
   ]
 }

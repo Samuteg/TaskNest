@@ -16,7 +16,7 @@ import { authClient } from "@/lib/auth-client";
 
 function SignInButton() {
 	return (
-		<Link to="/login">
+		<Link search={{ verified: undefined }} to="/login">
 			<Button variant="outline">Sign In</Button>
 		</Link>
 	);

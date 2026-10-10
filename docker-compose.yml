@@ -6,7 +6,7 @@ services:
     container_name: tasknest-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no ambiente ou em .env na raiz}
       POSTGRES_DB: tasknest
     ports:
       - "5432:5432"
@@ -61,7 +61,7 @@ services:
         required: false
     environment:
       CORS_ORIGIN: http://localhost:3001
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/tasknest
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/tasknest
     depends_on:
       db:
         condition: service_healthy

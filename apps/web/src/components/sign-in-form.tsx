@@ -33,6 +33,31 @@ export default function SignInForm({
 				},
 				{
 					onError: (error) => {
+						if (
+							error.error.code === "EMAIL_NOT_VERIFIED" ||
+							error.error.status === 403
+						) {
+							toast.error("Email not verified. Check your inbox.", {
+								action: {
+									label: "Resend",
+									onClick: () => {
+										authClient
+											.sendVerificationEmail({ email: value.email })
+											.then(() => {
+												toast.success("Verification email resent.");
+											})
+											.catch((resendError: unknown) => {
+												toast.error(
+													resendError instanceof Error
+														? resendError.message
+														: "Could not resend email"
+												);
+											});
+									},
+								},
+							});
+							return;
+						}
 						toast.error(error.error.message || error.error.statusText);
 					},
 					onSuccess: () => {
@@ -47,7 +72,7 @@ export default function SignInForm({
 		validators: {
 			onSubmit: z.object({
 				email: z.email("Invalid email address"),
-				password: z.string().min(8, "Password must be at least 8 characters"),
+				password: z.string().min(1, "Password is required"),
 			}),
 		},
 	});

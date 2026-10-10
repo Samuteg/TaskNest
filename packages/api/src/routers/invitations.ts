@@ -40,16 +40,27 @@ export const invitationsRouter = {
 				throw new ORPCError("BAD_REQUEST");
 			}
 
-			await context.db.insert(projectMember).values({
-				projectId: inv.projectId,
-				role: inv.role as "admin" | "member",
-				userId: context.session.user.id,
-			});
+			if (
+				inv.email.toLowerCase() !== context.session.user.email.toLowerCase()
+			) {
+				throw new ORPCError("FORBIDDEN");
+			}
 
-			await context.db
-				.update(invitation)
-				.set({ status: "accepted" })
-				.where(eq(invitation.id, input.invitationId));
+			await context.db.transaction(async (tx) => {
+				await tx
+					.insert(projectMember)
+					.values({
+						projectId: inv.projectId,
+						role: inv.role as "admin" | "member",
+						userId: context.session.user.id,
+					})
+					.onConflictDoNothing();
+
+				await tx
+					.update(invitation)
+					.set({ status: "accepted" })
+					.where(eq(invitation.id, input.invitationId));
+			});
 
 			return { success: true };
 		}),
@@ -146,6 +157,7 @@ export const invitationsRouter = {
 		.handler(async ({ context, input }) => {
 			await requireMember(context.db, context.session.user.id, input.projectId);
 			return context.db.query.invitation.findMany({
+				limit: 100,
 				where: and(
 					eq(invitation.projectId, input.projectId),
 					eq(invitation.status, "pending")

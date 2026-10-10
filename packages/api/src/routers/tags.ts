@@ -63,6 +63,7 @@ export const tagsRouter = {
 	list: protectedProcedure.handler(async ({ context }) =>
 		context.db.query.tag.findMany({
 			columns: { color: true, id: true, name: true },
+			limit: 100,
 			orderBy: [asc(tag.name)],
 			where: eq(tag.userId, context.session.user.id),
 		})

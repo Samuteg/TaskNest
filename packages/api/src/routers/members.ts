@@ -25,6 +25,7 @@ export const membersRouter = {
 		.handler(async ({ context, input }) => {
 			await requireMember(context.db, context.session.user.id, input.projectId);
 			return context.db.query.projectMember.findMany({
+				limit: 100,
 				where: eq(projectMember.projectId, input.projectId),
 				with: {
 					user: {

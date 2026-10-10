@@ -2,7 +2,6 @@ import { Button } from "@TaskNest/ui/components/button";
 import { Input } from "@TaskNest/ui/components/input";
 import { Label } from "@TaskNest/ui/components/label";
 import { useForm } from "@tanstack/react-form";
-import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import z from "zod";
 
@@ -15,9 +14,6 @@ export default function SignUpForm({
 }: {
 	onSwitchToSignIn: () => void;
 }) {
-	const navigate = useNavigate({
-		from: "/",
-	});
 	const { isPending } = authClient.useSession();
 
 	const form = useForm({
@@ -29,6 +25,7 @@ export default function SignUpForm({
 		onSubmit: async ({ value }) => {
 			await authClient.signUp.email(
 				{
+					callbackURL: "/login?verified=1",
 					email: value.email,
 					name: value.name,
 					password: value.password,
@@ -38,10 +35,7 @@ export default function SignUpForm({
 						toast.error(error.error.message || error.error.statusText);
 					},
 					onSuccess: () => {
-						navigate({
-							to: "/dashboard",
-						});
-						toast.success("Sign up successful");
+						toast.success("Account created. Check your email to verify.");
 					},
 				}
 			);
@@ -50,7 +44,7 @@ export default function SignUpForm({
 			onSubmit: z.object({
 				email: z.email("Invalid email address"),
 				name: z.string().min(2, "Name must be at least 2 characters"),
-				password: z.string().min(8, "Password must be at least 8 characters"),
+				password: z.string().min(12, "Password must be at least 12 characters"),
 			}),
 		},
 	});

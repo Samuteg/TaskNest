@@ -120,7 +120,13 @@ export const commentsRouter = {
 		}),
 
 	list: protectedProcedure
-		.input(z.object({ taskId: z.string().uuid() }))
+		.input(
+			z.object({
+				limit: z.number().int().min(1).max(100).default(50),
+				offset: z.number().int().min(0).default(0),
+				taskId: z.string().uuid(),
+			})
+		)
 		.handler(async ({ context, input }) => {
 			const userId = context.session.user.id;
 			const membership = await requireTaskMembership(
@@ -132,6 +138,8 @@ export const commentsRouter = {
 				membership.role === "admin" || membership.role === "owner";
 
 			const comments = await context.db.query.taskComment.findMany({
+				limit: input.limit,
+				offset: input.offset,
 				orderBy: [asc(taskComment.createdAt), asc(taskComment.id)],
 				where: eq(taskComment.taskId, input.taskId),
 				with: { author: { columns: { id: true, image: true, name: true } } },
